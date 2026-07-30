@@ -13,7 +13,7 @@ class PranaTheme {
         surface: PranaColors.slateCard,
         error: PranaColors.alertRed,
       ),
-      cardTheme: const CardTheme(
+      cardTheme: const CardThemeData(
         color: PranaColors.slateCard,
         elevation: 0,
         shape: RoundedRectangleBorder(

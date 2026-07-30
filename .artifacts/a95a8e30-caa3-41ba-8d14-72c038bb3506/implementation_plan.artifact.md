@@ -1,53 +1,31 @@
-# Implementation Plan - Prana Medical App Onboarding & Auth Flow
+# Implementation Plan - Fix Gradle Build Not Found Error
 
-Implement a modern Android application for "Prana" using Jetpack Compose, focusing on the splash screen, onboarding flow, and authentication (Phone/OTP).
+The user is encountering a "Directory does not contain a Gradle build" error during sync in a Flutter project. This occurs because the IDE is configured to look for Gradle files in the project root instead of the `android/` directory.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> The current project is a plain Java project (`src/Main.java`). I will propose converting it to a standard Android Gradle project structure.
-
-> [!NOTE]
-> I will use Jetpack Compose for the UI as it is the modern standard for Android development, ensuring the app is responsive and matches the dark theme requirements.
+> This project is a Flutter project. The Gradle build is located in the `android/` directory. The fix involves reconfiguring the IDE to recognize `android/` as the Gradle root.
+>
+> There is also a secondary issue with NDK installation that might persist after fixing the project structure. I will attempt to resolve this as well.
 
 ## Proposed Changes
 
-### 1. Project Infrastructure
-- Convert the project to an Android module.
-- Add necessary dependencies: `Compose`, `Navigation-Compose`, `ViewModel-Compose`, `Hilt` (optional but recommended), `Retrofit/Ktor`.
+### IDE Configuration
 
-### 2. Theming & Resources
-- **Colors**: Define the Prana color palette (Midnight Navy background, Teal/Cyan accents).
-- **Typography**: Define accessible fonts for high readability.
-- **Icons**: Use Material Icons or specific medical emojis as placeholders for 🛡️, 📱, 🔒.
+#### [MODIFY] [.idea/gradle.xml](file:///home/sreeju/AndroidStudioProjects/prana/.idea/gradle.xml)
+- Update `externalProjectPath` to point to `$PROJECT_DIR$/android` instead of `$PROJECT_DIR$`. (Already applied)
 
-### 3. Navigation & Flow
-- **Splash Screen**: Logo display using the `SplashScreen` API.
-- **Onboarding (Pager)**: 3-step introduction with "Continue" and "Start Setup" buttons.
-- **Auth Flow**:
-    - `LoginScreen`: Phone number entry.
-    - `OtpScreen`: 6-digit OTP entry + verification logic.
-    - `ProfileSetupScreen`: (Only for `is_new_user: true`) Name, Blood Group, Weight, Height.
-- **Dashboard**: Target screen after successful auth.
+### Android Build Configuration
 
-### 4. Component Details
-
-#### [NEW] [Theme.kt](file:///home/sreeju/AndroidStudioProjects/prana/app/src/main/java/com/prana/ui/theme/Theme.kt)
-Define the `PranaTheme` with the specified dark mode colors.
-
-#### [NEW] [OnboardingScreen.kt](file:///home/sreeju/AndroidStudioProjects/prana/app/src/main/java/com/prana/ui/onboarding/OnboardingScreen.kt)
-Implement a `HorizontalPager` with the 3 onboarding slides.
-
-#### [NEW] [AuthViewModel.kt](file:///home/sreeju/AndroidStudioProjects/prana/app/src/main/java/com/prana/ui/auth/AuthViewModel.kt)
-Handle phone number submission, OTP verification, and navigation logic based on the `is_new_user` flag.
+#### [MODIFY] [android/app/build.gradle.kts](file:///home/sreeju/AndroidStudioProjects/prana/android/app/build.gradle.kts)
+- If the NDK installation continues to fail, I will try to explicitly set the `ndkVersion` to a version already present on disk to avoid the auto-installation attempt.
 
 ## Verification Plan
 
 ### Automated Tests
-- Unit tests for `AuthViewModel` to verify navigation state based on API response.
-- Compose tests for `OnboardingScreen` to ensure pager swipe and button clicks work.
+- Run `gradle_sync` to verify that the "Gradle build not found" error is resolved.
+- Run a simple Gradle task like `:app:help` to ensure the project structure is correctly recognized.
 
 ### Manual Verification
-- Deploy to emulator/device.
-- Verify color contrast and readability in dark mode.
-- Walk through the full onboarding and login flow.
+- Verify that the Android modules appear in the Project view in Android Studio.

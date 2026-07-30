@@ -1,0 +1,2 @@
+ninja: Entering directory `/home/sreeju/.pub-cache/hosted/pub.dev/jni-1.0.2/android/.cxx/Debug/1w2k3m4c/armeabi-v7a'
+ninja: no work to do.

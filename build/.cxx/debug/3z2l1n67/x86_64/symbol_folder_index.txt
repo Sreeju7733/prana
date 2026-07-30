@@ -1,0 +1,1 @@
+/home/sreeju/AndroidStudioProjects/prana/build/app/intermediates/cxx/debug/3z2l1n67/obj/x86_64
