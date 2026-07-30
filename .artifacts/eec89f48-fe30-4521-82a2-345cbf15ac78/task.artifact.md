@@ -1,0 +1,3 @@
+- [ ] Update `lib/theme/theme.dart` to use `CardThemeData` instead of `CardTheme`
+- [ ] Verify build with `flutter build bundle`
+- [ ] Verify build with Gradle task `:app:compileFlutterBuildDebug`

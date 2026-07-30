@@ -1,0 +1,9 @@
+- `[ ]` Initialize Flutter project structure (`pubspec.yaml`, `lib/` directory)
+- `[ ]` Define Prana Theme and Colors
+- `[ ]` Implement Authentication Service and Logic
+- `[ ]` Create Splash Screen
+- `[ ]` Create Onboarding Screen (3 slides)
+- `[ ]` Create Login (Phone) and OTP Screens
+- `[ ]` Create Complete Profile Screen
+- `[ ]` Create Dashboard Placeholder
+- `[ ]` Connect Navigation Flow
