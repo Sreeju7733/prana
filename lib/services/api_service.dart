@@ -2,25 +2,39 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  final String baseUrl = "http://10.97.134.37:3000"; // Placeholder
+  final String baseUrl = "http://10.97.134.37:3000";
 
   Future<Map<String, dynamic>> sendOtp(String phoneNumber) async {
-    // Simulated API call
-    // final response = await http.post(Uri.parse('$baseUrl/api/auth/login'), body: {'phone': phoneNumber});
-    await Future.delayed(const Duration(seconds: 1));
-    return {'status': 'success'};
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth/send-otp'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'phone': phoneNumber}),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to send OTP');
+    }
   }
 
   Future<Map<String, dynamic>> verifyOtp(String phoneNumber, String otp) async {
-    // Simulated API call for /api/auth/verify-otp
-    // final response = await http.post(Uri.parse('$baseUrl/api/auth/verify-otp'), body: {'phone': phoneNumber, 'otp': otp});
-    await Future.delayed(const Duration(seconds: 1));
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth/verify-otp'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'phone': phoneNumber,
+        'otp': otp,
+      }),
+    );
 
-    // Mock response based on requirements
-    return {
-      'token': 'mock_jwt_token',
-      'is_new_user': true, // Change this to test flows
-    };
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Invalid or expired OTP');
+    }
   }
 
   Future<void> updateProfile({
