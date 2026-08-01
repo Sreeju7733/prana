@@ -337,11 +337,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+    final String pranaId = _profile?['data']?['prana_id'] ?? 'PRAN-2973CAC1';
+    final String bloodGroup = _profile?['data']?['blood_group'] ?? 'B+';
+    final List criticalAllergies = _allergies.where((a) => a['is_critical'] == true || a['severity'] == 'severe').toList();
+    final String topAllergy = criticalAllergies.isNotEmpty ? criticalAllergies.first['allergen'] : 'Penicillin — Severe';
+
+    // Calculate completion percentage
+    int completedFields = 0;
+    if (_profile?['data']?['full_name'] != null) completedFields++;
+    if (_profile?['data']?['blood_group'] != null) completedFields++;
+    if (_allergies.isNotEmpty) completedFields++;
+    if (_medications.isNotEmpty) completedFields++;
+    if (_conditions.isNotEmpty) completedFields++;
+    final int completionPct = ((completedFields / 5) * 100).round();
+    final bool isProfileIncomplete = completionPct < 100;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top User Greeting & Header Bar
+              // 1. Header (2 lines max: Active status + Hello + Monospace PRANA ID)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -350,207 +370,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       Row(
                         children: [
-                          Text(
-                            'Hello, ${_getUserFirstName()}',
-                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(color: Color(0xFF0D9488), shape: BoxShape.circle),
                           ),
                           const SizedBox(width: 6),
-                          const Text('👋', style: TextStyle(fontSize: 18)),
+                          const Text(
+                            'Active',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 2),
-                      const Text('Your Medical Identity is Active', style: TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w500)),
+                      Text(
+                        'Hello, ${_getUserFirstName()}',
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5),
+                      ),
                     ],
                   ),
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: _copyPranaId,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                            boxShadow: const [
-                              BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2)),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.badge_outlined, size: 16, color: theme.primaryColor),
-                              const SizedBox(width: 4),
-                              Text(
-                                _profile?['data']?['prana_id'] ?? 'PRAN-7843',
-                                style: const TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.copy_rounded, size: 12, color: Color(0xFF94A3B8)),
-                            ],
-                          ),
-                        ),
+                  GestureDetector(
+                    onTap: _copyPranaId,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: _showCardStatusDialog,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFECFDF5),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                      child: Row(
+                        children: [
+                          Text(
+                            pranaId,
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: Color(0xFF0F172A),
+                            ),
                           ),
-                          child: const CircleAvatar(radius: 4, backgroundColor: Color(0xFF10B981)),
-                        ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.copy_rounded, size: 14, color: Color(0xFF64748B)),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
 
-              // Health Summary Hero Card
-              GestureDetector(
-                onTap: _showEmergencyPreviewModal,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x0F000000),
-                        blurRadius: 16,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                    border: Border.all(color: const Color(0xFFF1F5F9)),
-                  ),
-                  child: Row(
-                    children: [
-                      // Left: Huge Blood Group Circle
-                      Container(
-                        width: 72,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFFEF4444).withValues(alpha: 0.1),
-                          border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3), width: 2),
-                        ),
-                        child: Center(
-                          child: Text(
-                            _profile?['data']?['blood_group'] ?? 'B+',
-                            style: const TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFFDC2626),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-
-                      // Right: 3 Mini Stats
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('Health Overview', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A))),
-                                Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF94A3B8)),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                _buildMiniStat('💊 ${_medications.length}', 'Meds'),
-                                _buildMiniStat('⚠️ ${_allergies.length}', 'Allergy'),
-                                _buildMiniStat('🏥 ${_conditions.length}', 'Condition'),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Quick Actions Row (Horizontal Scroll)
-              Text(
-                'QUICK ACTIONS',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: [
-                    _buildQuickActionButton(
-                      icon: Icons.camera_alt_outlined,
-                      label: 'Scan RX',
-                      color: const Color(0xFF0D9488),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const PrescriptionScannerScreen()),
-                        );
-                      },
-                    ),
-                    _buildQuickActionButton(
-                      icon: Icons.medication_outlined,
-                      label: 'Add Med',
-                      color: const Color(0xFF0284C7),
-                      onTap: () {
-                        _showAddMedicationSheet(context);
-                      },
-                    ),
-                    _buildQuickActionButton(
-                      icon: Icons.warning_amber_rounded,
-                      label: 'Add Allergy',
-                      color: const Color(0xFFEF4444),
-                      onTap: () {
-                        if (widget.onNavigateTab != null) widget.onNavigateTab!(1);
-                      },
-                    ),
-                    _buildQuickActionButton(
-                      icon: Icons.assignment_outlined,
-                      label: 'Add Condition',
-                      color: const Color(0xFF8B5CF6),
-                      onTap: () {
-                        if (widget.onNavigateTab != null) widget.onNavigateTab!(1);
-                      },
-                    ),
-                    _buildQuickActionButton(
-                      icon: Icons.favorite_outline,
-                      label: 'Log Vitals',
-                      color: const Color(0xFFEC4899),
-                      onTap: () {
-                        if (widget.onNavigateTab != null) widget.onNavigateTab!(1);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Medical Briefing Card
+              // 2. Emergency Briefing (Promoted to position #2 with 4px teal accent border)
               GestureDetector(
                 onTap: _showBriefingModal,
                 child: Container(
@@ -559,9 +428,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: const Border(
+                      left: BorderSide(color: Color(0xFF0D9488), width: 4),
+                      top: BorderSide(color: Color(0xFFE2E8F0)),
+                      right: BorderSide(color: Color(0xFFE2E8F0)),
+                      bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
                     boxShadow: const [
-                      BoxShadow(color: Color(0x05000000), blurRadius: 10, offset: Offset(0, 2)),
+                      BoxShadow(color: Color(0x06000000), blurRadius: 12, offset: Offset(0, 3)),
                     ],
                   ),
                   child: Column(
@@ -580,17 +454,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ],
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.refresh_rounded, size: 20, color: Color(0xFF64748B)),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Regenerating AI briefing...')),
-                              );
-                            },
+                          Row(
+                            children: [
+                              Text('14:32', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                              IconButton(
+                                icon: const Icon(Icons.refresh_rounded, size: 18, color: Color(0xFF64748B)),
+                                onPressed: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Regenerating AI briefing...')),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         _briefing?['briefing'] ??
                         '• Type 2 Diabetes (Metformin 500mg BD)\n'
@@ -601,17 +480,229 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Generated today at 14:32', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-                          const Text('Tap to view full >', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
-                        ],
+                      const Text(
+                        'Tap to view full →',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
                       ),
                     ],
                   ),
                 ),
               ),
+              const SizedBox(height: 20),
+
+              // 3. Health Overview (Equal-weight side by side badges + slim stat row)
+              GestureDetector(
+                onTap: _showEmergencyPreviewModal,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF2F2),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFFCA5A5)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Text('🩸 ', style: TextStyle(fontSize: 16)),
+                                  Text(
+                                    bloodGroup,
+                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFFDC2626)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF7ED),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFFDBA74)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Text('⚠️ ', style: TextStyle(fontSize: 14)),
+                                  Expanded(
+                                    child: Text(
+                                      topAllergy,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFC2410C)),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      (_medications.isEmpty && _conditions.isEmpty)
+                          ? InkWell(
+                              onTap: () {
+                                if (widget.onNavigateTab != null) widget.onNavigateTab!(1);
+                              },
+                              child: const Text(
+                                'Add your medications and conditions to complete your profile →',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0D9488)),
+                              ),
+                            )
+                          : Row(
+                              children: [
+                                Text('💊 ${_medications.length} Meds', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                const SizedBox(width: 16),
+                                Text('🏥 ${_conditions.length} Conditions', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                              ],
+                            ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // 4. Profile Completion (Shows if < 100%)
+              if (isProfileIncomplete) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Profile $completionPct% complete', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
+                          Text('Next: Add ${_medications.isEmpty ? "medications" : "allergies"}', style: const TextStyle(fontSize: 11, color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      LinearProgressIndicator(
+                        value: completionPct / 100,
+                        backgroundColor: const Color(0xFFE2E8F0),
+                        color: theme.primaryColor,
+                        minHeight: 6,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+
+              // 5. Quick Actions (Ordered by priority: Allergy, Med, Scan RX, Vitals, Condition in unified Teal tone)
+              Text(
+                'QUICK ACTIONS',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: [
+                    _buildQuickActionButton(
+                      icon: Icons.warning_amber_rounded,
+                      label: 'Add Allergy',
+                      onTap: () {
+                        if (widget.onNavigateTab != null) widget.onNavigateTab!(1);
+                      },
+                    ),
+                    _buildQuickActionButton(
+                      icon: Icons.medication_outlined,
+                      label: 'Add Med',
+                      onTap: () {
+                        _showAddMedicationSheet(context);
+                      },
+                    ),
+                    _buildQuickActionButton(
+                      icon: Icons.camera_alt_outlined,
+                      label: 'Scan RX',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const PrescriptionScannerScreen()),
+                        );
+                      },
+                    ),
+                    _buildQuickActionButton(
+                      icon: Icons.favorite_outline,
+                      label: 'Log Vitals',
+                      onTap: () {
+                        if (widget.onNavigateTab != null) widget.onNavigateTab!(1);
+                      },
+                    ),
+                    _buildQuickActionButton(
+                      icon: Icons.assignment_outlined,
+                      label: 'Add Condition',
+                      onTap: () {
+                        if (widget.onNavigateTab != null) widget.onNavigateTab!(1);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // 6. Recent Activity / Scan Log (Connected to scan logs)
+              Text(
+                'RECENT FIELD SCANS',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Color(0xFFCCFBF1),
+                      child: Icon(Icons.qr_code_scanner, color: Color(0xFF0D9488), size: 20),
+                    ),
+                    SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('AIIMS Emergency (Paramedic)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
+                          SizedBox(height: 2),
+                          Text('Scanned 28 Jul, 18:45 • Delhi, IN', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                        ],
+                      ),
+                    ),
               const SizedBox(height: 20),
             ],
           ),
@@ -620,20 +711,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildMiniStat(String value, String label) {
-    return Column(
-      children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
-        const SizedBox(height: 2),
-        Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-      ],
-    );
-  }
-
   Widget _buildQuickActionButton({
     required IconData icon,
     required String label,
-    required Color color,
     required VoidCallback onTap,
   }) {
     return Padding(
@@ -643,19 +723,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 50,
+              height: 50,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: color.withValues(alpha: 0.1),
-                border: Border.all(color: color.withValues(alpha: 0.2)),
+                color: const Color(0xFF0D9488).withValues(alpha: 0.08),
+                border: Border.all(color: const Color(0xFF0D9488).withValues(alpha: 0.2)),
               ),
-              child: Icon(icon, color: color, size: 26),
+              child: Icon(icon, color: const Color(0xFF0D9488), size: 22),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
             ),
           ],
         ),
