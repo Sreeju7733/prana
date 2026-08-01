@@ -20,6 +20,25 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> resendOtp(String phoneNumber) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth/resend-otp'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'phone': phoneNumber}),
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data['data'] as Map<String, dynamic>;
+    } else if (response.statusCode == 429) {
+      final err = data['error'] ?? {};
+      throw Exception(err['message'] ?? 'Please wait before requesting another OTP');
+    } else {
+      final err = data['error'] ?? {};
+      throw Exception(err['message'] ?? 'Failed to resend OTP');
+    }
+  }
+
   Future<Map<String, dynamic>> verifyOtp(String phoneNumber, String otp) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/auth/verify-otp'),
