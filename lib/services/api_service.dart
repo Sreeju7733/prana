@@ -89,4 +89,141 @@ class ApiService {
       throw Exception(errorData['error'] ?? 'Failed to update profile');
     }
   }
+  // --- MEDICATIONS ---
+  Future<List<dynamic>> getMedications() async {
+    final token = await StorageService().getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/medications'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      final res = jsonDecode(response.body);
+      return res['data'] ?? [];
+    } else {
+      throw Exception('Failed to fetch medications');
+    }
+  }
+
+  Future<Map<String, dynamic>> addMedication(Map<String, dynamic> data) async {
+    final token = await StorageService().getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/medications'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to add medication');
+    }
+  }
+
+  // --- ALLERGIES ---
+  Future<List<dynamic>> getAllergies() async {
+    final token = await StorageService().getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/allergies'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      final res = jsonDecode(response.body);
+      return res['data'] ?? [];
+    } else {
+      throw Exception('Failed to fetch allergies');
+    }
+  }
+
+  Future<Map<String, dynamic>> addAllergy(Map<String, dynamic> data) async {
+    final token = await StorageService().getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/allergies'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to add allergy');
+    }
+  }
+
+  // --- CONDITIONS & VITALS ---
+  Future<List<dynamic>> getConditions() async {
+    final token = await StorageService().getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/conditions'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      final res = jsonDecode(response.body);
+      return res['data'] ?? [];
+    } else {
+      throw Exception('Failed to fetch conditions');
+    }
+  }
+
+  Future<List<dynamic>> getVitals() async {
+    final token = await StorageService().getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/vitals'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      final res = jsonDecode(response.body);
+      return res['data'] ?? [];
+    } else {
+      throw Exception('Failed to fetch vitals');
+    }
+  }
+
+  // --- BRIEFING & CARD SECURITY ---
+  Future<Map<String, dynamic>> getEmergencyBriefing() async {
+    final token = await StorageService().getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/patient/briefing'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to fetch briefing');
+    }
+  }
+
+  Future<Map<String, dynamic>> getCardSecurity() async {
+    final token = await StorageService().getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/card/security'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to fetch card security status');
+    }
+  }
+
+  // --- SCANNER & INTERACTION CHECKER ---
+  Future<Map<String, dynamic>> checkDrugInteraction(String candidateDrug) async {
+    final token = await StorageService().getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/checker/drug-interaction'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'candidate_drug': candidateDrug}),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to check drug interaction');
+    }
+  }
 }

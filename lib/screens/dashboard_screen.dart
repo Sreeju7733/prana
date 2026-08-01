@@ -292,72 +292,77 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Sticky Top Header (PRANA ID + Card Status)
+              // Top User Greeting & Header Bar
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // PRANA ID Badge
-                  GestureDetector(
-                    onTap: _copyPranaId,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFCBD5E1)),
-                        boxShadow: const [
-                          BoxShadow(color: Color(0x08000000), blurRadius: 6, offset: Offset(0, 2)),
-                        ],
-                      ),
-                      child: Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Icon(Icons.badge_outlined, size: 18, color: theme.primaryColor),
+                          Text('Hello, John', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A), letterSpacing: -0.5)),
                           const SizedBox(width: 6),
-                          const Text(
-                            'PRAN-7843-2910',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: Color(0xFF0F172A),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          const Icon(Icons.copy_rounded, size: 14, color: Color(0xFF64748B)),
+                          const Text('👋', style: TextStyle(fontSize: 18)),
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 2),
+                      const Text('Your Medical Identity is Active', style: TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w500)),
+                    ],
                   ),
-
-                  // Card Status Badge
-                  GestureDetector(
-                    onTap: _showCardStatusDialog,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFA7F3D0)),
-                      ),
-                      child: const Row(
-                        children: [
-                          CircleAvatar(radius: 4, backgroundColor: Color(0xFF10B981)),
-                          SizedBox(width: 6),
-                          Text(
-                            'Card Active',
-                            style: TextStyle(
-                              color: Color(0xFF047857),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
+                  Row(
+                    children: [
+                      // PRANA ID Badge
+                      GestureDetector(
+                        onTap: _copyPranaId,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            boxShadow: const [
+                              BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2)),
+                            ],
                           ),
-                        ],
+                          child: Row(
+                            children: [
+                              Icon(Icons.badge_outlined, size: 16, color: theme.primaryColor),
+                              const SizedBox(width: 4),
+                              const Text(
+                                'PRAN-7843',
+                                style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.copy_rounded, size: 12, color: Color(0xFF94A3B8)),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      // Card Status Badge
+                      GestureDetector(
+                        onTap: _showCardStatusDialog,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFECFDF5),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                          ),
+                          child: const CircleAvatar(radius: 4, backgroundColor: Color(0xFF10B981)),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // Emergency Banner (shown if warning toggle is simulated)
               if (!_hasCriticalAllergy)
