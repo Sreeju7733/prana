@@ -72,39 +72,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showCardStatusDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle, color: Color(0xFF10B981)),
-            SizedBox(width: 8),
-            Text('Card Status: Active'),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('• Last scanned: 2 days ago by AIIMS Delhi Emergency'),
-            SizedBox(height: 8),
-            Text('• Security level: GREEN (Public basic view enabled)'),
-            SizedBox(height: 8),
-            Text('• Geo-restriction: India only'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showEmergencyPreviewModal() {
     showModalBottomSheet(
       context: context,
@@ -332,11 +299,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
     final String pranaId = _profile?['data']?['prana_id'] ?? 'PRAN-2973CAC1';
     final String bloodGroup = _profile?['data']?['blood_group'] ?? 'B+';
     final List criticalAllergies = _allergies.where((a) => a['is_critical'] == true || a['severity'] == 'severe').toList();
@@ -703,6 +665,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ],
                       ),
                     ),
+                    Icon(Icons.verified_outlined, color: Color(0xFF0D9488), size: 18),
+                  ],
+                ),
+              ),
               const SizedBox(height: 20),
             ],
           ),
