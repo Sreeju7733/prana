@@ -14,7 +14,7 @@ class PranaApp extends StatelessWidget {
     return MaterialApp(
       title: 'Prana',
       debugShowCheckedModeBanner: false,
-      theme: PranaTheme.darkTheme,
+      theme: PranaTheme.lightTheme,
       home: const SplashScreen(),
     );
   }

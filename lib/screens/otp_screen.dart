@@ -20,7 +20,12 @@ class _OtpScreenState extends State<OtpScreen> {
   bool _isLoading = false;
 
   void _verifyOtp() async {
-    if (_otpController.text.length < 4) return;
+    if (_otpController.text.length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid 6-digit OTP')),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
@@ -75,10 +80,12 @@ class _OtpScreenState extends State<OtpScreen> {
             TextField(
               controller: _otpController,
               keyboardType: TextInputType.number,
+              maxLength: 6,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 24, letterSpacing: 8),
               decoration: const InputDecoration(
-                hintText: '0000',
+                hintText: '000000',
+                counterText: '',
               ),
             ),
             const Spacer(),
