@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../main_navigation_screen.dart';
 import '../services/api_service.dart';
-import 'dashboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -44,7 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (mounted) {
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (context) => const DashboardScreen()),
+            MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
             (route) => false,
           );
         }

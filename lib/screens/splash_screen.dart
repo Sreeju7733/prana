@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../main_navigation_screen.dart';
 import '../services/storage_service.dart';
-import 'dashboard_screen.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -27,7 +27,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (token != null && token.isNotEmpty) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
       );
     } else {
       Navigator.pushReplacement(

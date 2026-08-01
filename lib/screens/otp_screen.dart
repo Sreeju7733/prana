@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import '../main_navigation_screen.dart';
 import '../theme/colors.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import 'profile_screen.dart';
-import 'dashboard_screen.dart';
 
 class OtpScreen extends StatefulWidget {
   final String phoneNumber;
@@ -42,7 +42,7 @@ class _OtpScreenState extends State<OtpScreen> {
         } else {
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (context) => const DashboardScreen()),
+            MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
             (route) => false,
           );
         }
