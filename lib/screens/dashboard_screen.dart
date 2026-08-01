@@ -11,8 +11,6 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final bool _hasCriticalAllergy = true; // Set to true to show allergy card / toggle banner
-
   void _copyPranaId() {
     Clipboard.setData(const ClipboardData(text: "PRAN-7843-2910"));
     ScaffoldMessenger.of(context).showSnackBar(
@@ -296,23 +294,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
+                  const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Text('Hello, John', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A), letterSpacing: -0.5)),
-                          const SizedBox(width: 6),
-                          const Text('👋', style: TextStyle(fontSize: 18)),
+                          Text('Hello, John', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5)),
+                          SizedBox(width: 6),
+                          Text('👋', style: TextStyle(fontSize: 18)),
                         ],
                       ),
-                      const SizedBox(height: 2),
-                      const Text('Your Medical Identity is Active', style: TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w500)),
+                      SizedBox(height: 2),
+                      Text('Your Medical Identity is Active', style: TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w500)),
                     ],
                   ),
                   Row(
                     children: [
-                      // PRANA ID Badge
                       GestureDetector(
                         onTap: _copyPranaId,
                         child: Container(
@@ -345,7 +342,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Card Status Badge
                       GestureDetector(
                         onTap: _showCardStatusDialog,
                         child: Container(
@@ -363,35 +359,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
               const SizedBox(height: 20),
-
-              // Emergency Banner (shown if warning toggle is simulated)
-              if (!_hasCriticalAllergy)
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF7ED),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFDBA74)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.warning_amber_rounded, color: Color(0xFFEA580C), size: 24),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          '⚠️ Add your critical allergies for emergency safety',
-                          style: TextStyle(
-                            color: Color(0xFFC2410C),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
 
               // Health Summary Hero Card
               GestureDetector(
