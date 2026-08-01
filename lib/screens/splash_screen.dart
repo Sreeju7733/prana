@@ -37,19 +37,39 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.health_and_safety, size: 80, color: Color(0xFF00D4AA)),
-            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: theme.primaryColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.health_and_safety, size: 80, color: theme.primaryColor),
+            ),
+            const SizedBox(height: 24),
             Text(
               'PRANA',
-              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                color: const Color(0xFF00D4AA),
+              style: TextStyle(
+                color: theme.primaryColor,
+                fontSize: 32,
                 fontWeight: FontWeight.bold,
-                letterSpacing: 4,
+                letterSpacing: 6,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'YOUR MEDICAL IDENTITY',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 2,
               ),
             ),
           ],
