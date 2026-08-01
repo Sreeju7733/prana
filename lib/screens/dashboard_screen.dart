@@ -14,11 +14,8 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final ApiService _apiService = ApiService();
 
-  Map<String, dynamic>? _profile;
-  List<dynamic> _medications = [];
-  List<dynamic> _allergies = [];
-  List<dynamic> _conditions = [];
-  Map<String, dynamic>? _briefing;
+  Map<String, dynamic>? _dashboardData;
+  bool _isRegeneratingBriefing = false;
 
   @override
   void initState() {
@@ -28,41 +25,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _fetchDashboardData() async {
     try {
-      final profileRes = await _apiService.getProfile();
-      final medsRes = await _apiService.getMedications().catchError((_) => <dynamic>[]);
-      final allergiesRes = await _apiService.getAllergies().catchError((_) => <dynamic>[]);
-      final conditionsRes = await _apiService.getConditions().catchError((_) => <dynamic>[]);
-      final briefingRes = await _apiService.getEmergencyBriefing().catchError((_) => <String, dynamic>{});
-
+      final res = await _apiService.getDashboard();
       if (mounted) {
         setState(() {
-          _profile = profileRes;
-          _medications = medsRes;
-          _allergies = allergiesRes;
-          _conditions = conditionsRes;
-          _briefing = briefingRes;
+          _dashboardData = res;
         });
       }
     } catch (_) {}
   }
 
+  Future<void> _handleRegenerateBriefing() async {
+    setState(() => _isRegeneratingBriefing = true);
+    try {
+      final res = await _apiService.regenerateBriefing();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('AI briefing regenerated successfully!')),
+        );
+        _fetchDashboardData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isRegeneratingBriefing = false);
+    }
+  }
+
   String _getUserFirstName() {
-    final data = _profile?['data'];
-    if (data != null) {
-      final String? fullName = data['full_name'];
-      if (fullName != null && fullName.trim().isNotEmpty) {
-        return fullName.trim().split(' ').first;
-      }
-      final String? phone = data['phone'];
-      if (phone != null && phone.isNotEmpty) {
-        return phone;
-      }
+    final fullName = _dashboardData?['profile']?['full_name'];
+    if (fullName != null && fullName.toString().trim().isNotEmpty) {
+      return fullName.toString().trim().split(' ').first;
     }
     return 'User';
   }
 
   void _copyPranaId() {
-    final pranaId = _profile?['data']?['prana_id'] ?? "PRAN-7843-2910";
+    final pranaId = _dashboardData?['profile']?['prana_id'] ?? "PRAN-2973CAC1";
     Clipboard.setData(ClipboardData(text: pranaId));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -135,15 +137,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         CircleAvatar(
                           radius: 28,
                           backgroundColor: const Color(0xFF0D9488),
-                          child: Text(_profile?['data']?['blood_group'] ?? 'B+', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                          child: Text(_dashboardData?['profile']?['blood_group'] ?? 'B+', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
                         ),
                         const SizedBox(width: 16),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(_profile?['data']?['full_name'] ?? 'User', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            Text('${_profile?['data']?['gender'] ?? 'M'} • DOB: ${_profile?['data']?['date_of_birth'] ?? '15 May 1995'}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
-                            Text('PRANA ID: ${_profile?['data']?['prana_id'] ?? "PRAN-7843-2910"}', style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w600, color: Color(0xFF0D9488))),
+                            Text(_dashboardData?['profile']?['full_name'] ?? 'User', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            Text('DOB: 15 May 1995', style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                            Text('PRANA ID: ${_dashboardData?['profile']?['prana_id'] ?? "PRAN-2973CAC1"}', style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w600, color: Color(0xFF0D9488))),
                           ],
                         ),
                       ],
@@ -299,20 +301,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final String pranaId = _profile?['data']?['prana_id'] ?? 'PRAN-2973CAC1';
-    final String bloodGroup = _profile?['data']?['blood_group'] ?? 'B+';
-    final List criticalAllergies = _allergies.where((a) => a['is_critical'] == true || a['severity'] == 'severe').toList();
-    final String topAllergy = criticalAllergies.isNotEmpty ? criticalAllergies.first['allergen'] : 'Penicillin — Severe';
+    final profile = _dashboardData?['profile'];
+    final healthSummary = _dashboardData?['health_summary'];
+    final briefing = _dashboardData?['briefing'];
+    final recentScans = (_dashboardData?['recent_scans'] as List?) ?? [];
 
-    // Calculate completion percentage
-    int completedFields = 0;
-    if (_profile?['data']?['full_name'] != null) completedFields++;
-    if (_profile?['data']?['blood_group'] != null) completedFields++;
-    if (_allergies.isNotEmpty) completedFields++;
-    if (_medications.isNotEmpty) completedFields++;
-    if (_conditions.isNotEmpty) completedFields++;
-    final int completionPct = ((completedFields / 5) * 100).round();
+    final String pranaId = profile?['prana_id'] ?? 'PRAN-2973CAC1';
+    final String bloodGroup = profile?['blood_group'] ?? 'B+';
+    final criticalAllergy = healthSummary?['critical_allergy'];
+    final String topAllergy = criticalAllergy != null
+        ? '${criticalAllergy['allergen']} — ${criticalAllergy['severity'] ?? "Severe"}'
+        : 'Penicillin — Severe';
+
+    final int medsCount = healthSummary?['meds_count'] ?? 0;
+    final int conditionsCount = healthSummary?['conditions_count'] ?? 0;
+    final int completionPct = profile?['profile_completion_pct'] ?? 80;
     final bool isProfileIncomplete = completionPct < 100;
+    final List missingSections = (profile?['missing_sections'] as List?) ?? [];
+    final String nextMissing = missingSections.isNotEmpty ? missingSections.first.toString() : 'medications';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -418,14 +424,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           Row(
                             children: [
-                              Text('14:32', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                              Text(
+                                briefing?['generated_at'] != null ? briefing['generated_at'].toString().split('T').last.substring(0, 5) : '14:32',
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                              ),
                               IconButton(
-                                icon: const Icon(Icons.refresh_rounded, size: 18, color: Color(0xFF64748B)),
-                                onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Regenerating AI briefing...')),
-                                  );
-                                },
+                                icon: _isRegeneratingBriefing
+                                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0D9488)))
+                                    : const Icon(Icons.refresh_rounded, size: 18, color: Color(0xFF64748B)),
+                                onPressed: _isRegeneratingBriefing ? null : _handleRegenerateBriefing,
                               ),
                             ],
                           ),
@@ -433,7 +440,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _briefing?['briefing'] ??
+                        briefing?['text'] ??
                         '• Type 2 Diabetes (Metformin 500mg BD)\n'
                         '• Severe Penicillin Allergy (Anaphylaxis Risk)\n'
                         '• Emergency Relay Jane Doe Verified',
@@ -514,7 +521,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      (_medications.isEmpty && _conditions.isEmpty)
+                      (medsCount == 0 && conditionsCount == 0)
                           ? InkWell(
                               onTap: () {
                                 if (widget.onNavigateTab != null) widget.onNavigateTab!(1);
@@ -526,9 +533,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             )
                           : Row(
                               children: [
-                                Text('💊 ${_medications.length} Meds', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                Text('💊 $medsCount Meds', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                                 const SizedBox(width: 16),
-                                Text('🏥 ${_conditions.length} Conditions', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                Text('🏥 $conditionsCount Conditions', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                               ],
                             ),
                     ],
@@ -553,7 +560,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('Profile $completionPct% complete', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
-                          Text('Next: Add ${_medications.isEmpty ? "medications" : "allergies"}', style: const TextStyle(fontSize: 11, color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),
+                          Text('Next: Add $nextMissing', style: const TextStyle(fontSize: 11, color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -648,26 +655,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
-                child: const Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Color(0xFFCCFBF1),
-                      child: Icon(Icons.qr_code_scanner, color: Color(0xFF0D9488), size: 20),
-                    ),
-                    SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                child: recentScans.isEmpty
+                    ? const Row(
                         children: [
-                          Text('AIIMS Emergency (Paramedic)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
-                          SizedBox(height: 2),
-                          Text('Scanned 28 Jul, 18:45 • Delhi, IN', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                          Icon(Icons.qr_code_scanner_outlined, color: Color(0xFF94A3B8), size: 24),
+                          SizedBox(width: 12),
+                          Text('No field scans yet', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          const CircleAvatar(
+                            backgroundColor: Color(0xFFCCFBF1),
+                            child: Icon(Icons.qr_code_scanner, color: Color(0xFF0D9488), size: 20),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(recentScans.first['responder_org'] ?? 'AIIMS Emergency (Paramedic)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
+                                const SizedBox(height: 2),
+                                Text('Scanned ${recentScans.first['scanned_at'] != null ? recentScans.first['scanned_at'].toString().split('T').first : "recently"} • ${recentScans.first['location_city'] ?? "IN"}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.verified_outlined, color: Color(0xFF0D9488), size: 18),
                         ],
                       ),
-                    ),
-                    Icon(Icons.verified_outlined, color: Color(0xFF0D9488), size: 18),
-                  ],
-                ),
               ),
               const SizedBox(height: 20),
             ],
