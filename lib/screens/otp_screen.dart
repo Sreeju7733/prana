@@ -28,6 +28,56 @@ class _OtpScreenState extends State<OtpScreen> {
   void initState() {
     super.initState();
     _startResendTimer();
+    for (int i = 0; i < 6; i++) {
+      _focusNodes[i].onKeyEvent = (node, event) {
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
+          if (_controllers[i].text.isEmpty && i > 0) {
+            _controllers[i - 1].text = '';
+            _focusNodes[i - 1].requestFocus();
+            setState(() {});
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      };
+    }
+  }
+
+  void _onOtpInputChanged(int index, String value) {
+    final digits = value.replaceAll(RegExp(r'\D'), '');
+
+    if (digits.length > 1) {
+      int startIndex = (digits.length == 6) ? 0 : index;
+      for (int i = 0; i < digits.length && (startIndex + i) < 6; i++) {
+        _controllers[startIndex + i].text = digits[i];
+      }
+
+      if (startIndex + digits.length >= 6) {
+        _focusNodes[5].unfocus();
+      } else {
+        int targetFocus = (startIndex + digits.length).clamp(0, 5);
+        _focusNodes[targetFocus].requestFocus();
+      }
+      setState(() {});
+      _checkAutoSubmit();
+      return;
+    }
+
+    if (digits.isNotEmpty) {
+      _controllers[index].text = digits;
+      if (index < 5) {
+        _focusNodes[index + 1].requestFocus();
+      } else {
+        _focusNodes[index].unfocus();
+      }
+    } else {
+      _controllers[index].text = '';
+      if (index > 0) {
+        _focusNodes[index - 1].requestFocus();
+      }
+    }
+    setState(() {});
+    _checkAutoSubmit();
   }
 
   void _startResendTimer() {
@@ -187,7 +237,6 @@ class _OtpScreenState extends State<OtpScreen> {
                       autofocus: index == 0,
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
-                      maxLength: 1,
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -211,18 +260,7 @@ class _OtpScreenState extends State<OtpScreen> {
                           borderSide: BorderSide(color: theme.primaryColor, width: 2),
                         ),
                       ),
-                      onChanged: (value) {
-                        if (value.isNotEmpty) {
-                          if (index < 5) {
-                            _focusNodes[index + 1].requestFocus();
-                          } else {
-                            _focusNodes[index].unfocus();
-                          }
-                        } else if (value.isEmpty && index > 0) {
-                          _focusNodes[index - 1].requestFocus();
-                        }
-                        _checkAutoSubmit();
-                      },
+                      onChanged: (value) => _onOtpInputChanged(index, value),
                     ),
                   );
                 }),
