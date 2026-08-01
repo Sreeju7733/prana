@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/api_service.dart';
 import 'prescription_scanner_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -11,12 +12,54 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  final ApiService _apiService = ApiService();
+  bool _isLoading = true;
+
+  Map<String, dynamic>? _profile;
+  List<dynamic> _medications = [];
+  List<dynamic> _allergies = [];
+  List<dynamic> _conditions = [];
+  Map<String, dynamic>? _briefing;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDashboardData();
+  }
+
+  Future<void> _fetchDashboardData() async {
+    setState(() => _isLoading = true);
+    try {
+      final results = await Future.wait([
+        _apiService.getProfile().catchError((_) => <String, dynamic>{}),
+        _apiService.getMedications().catchError((_) => <dynamic>[]),
+        _apiService.getAllergies().catchError((_) => <dynamic>[]),
+        _apiService.getConditions().catchError((_) => <dynamic>[]),
+        _apiService.getEmergencyBriefing().catchError((_) => <String, dynamic>{}),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _profile = results[0] as Map<String, dynamic>?;
+          _medications = results[1] as List<dynamic>;
+          _allergies = results[2] as List<dynamic>;
+          _conditions = results[3] as List<dynamic>;
+          _briefing = results[4] as Map<String, dynamic>?;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   void _copyPranaId() {
-    Clipboard.setData(const ClipboardData(text: "PRAN-7843-2910"));
+    final pranaId = _profile?['data']?['prana_id'] ?? "PRAN-7843-2910";
+    Clipboard.setData(ClipboardData(text: pranaId));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('PRANA ID copied to clipboard!'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Text('PRANA ID ($pranaId) copied to clipboard!'),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -290,6 +333,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (_isLoading)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: LinearProgressIndicator(
+                    color: theme.primaryColor,
+                    backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
+                  ),
+                ),
               // Top User Greeting & Header Bar
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -389,11 +440,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           color: const Color(0xFFEF4444).withValues(alpha: 0.1),
                           border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3), width: 2),
                         ),
-                        child: const Center(
+                        child: Center(
                           child: Text(
-                            'B+',
-                            style: TextStyle(
-                              fontSize: 28,
+                            _profile?['data']?['blood_group'] ?? 'B+',
+                            style: const TextStyle(
+                              fontSize: 26,
                               fontWeight: FontWeight.w900,
                               color: Color(0xFFDC2626),
                             ),
@@ -418,9 +469,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                _buildMiniStat('💊 2', 'Meds'),
-                                _buildMiniStat('⚠️ 1', 'Allergy'),
-                                _buildMiniStat('🏥 1', 'Condition'),
+                                _buildMiniStat('💊 ${_medications.length}', 'Meds'),
+                                _buildMiniStat('⚠️ ${_allergies.length}', 'Allergy'),
+                                _buildMiniStat('🏥 ${_conditions.length}', 'Condition'),
                               ],
                             ),
                           ],
@@ -537,11 +588,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ],
                       ),
                       const SizedBox(height: 6),
-                      const Text(
+                      Text(
+                        _briefing?['briefing'] ??
                         '• Type 2 Diabetes (Metformin 500mg BD)\n'
                         '• Severe Penicillin Allergy (Anaphylaxis Risk)\n'
                         '• Emergency Relay Jane Doe Verified',
-                        style: TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF475569)),
+                        style: const TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF475569)),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
