@@ -51,11 +51,11 @@ class _PrescriptionScannerScreenState extends State<PrescriptionScannerScreen> {
               ),
             ),
           ),
-          Positioned(
+          const Positioned(
             top: 40,
             left: 0,
             right: 0,
-            child: const Text(
+            child: Text(
               'Align prescription within frame',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
