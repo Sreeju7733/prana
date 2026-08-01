@@ -37,7 +37,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _handleRegenerateBriefing() async {
     setState(() => _isRegeneratingBriefing = true);
     try {
-      final res = await _apiService.regenerateBriefing();
+      await _apiService.regenerateBriefing();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('AI briefing regenerated successfully!')),
@@ -144,7 +144,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(_dashboardData?['profile']?['full_name'] ?? 'User', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            Text('DOB: 15 May 1995', style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                            const Text('DOB: 15 May 1995', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
                             Text('PRANA ID: ${_dashboardData?['profile']?['prana_id'] ?? "PRAN-2973CAC1"}', style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w600, color: Color(0xFF0D9488))),
                           ],
                         ),

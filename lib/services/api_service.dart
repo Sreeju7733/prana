@@ -168,6 +168,23 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> addCondition(Map<String, dynamic> data) async {
+    final token = await StorageService().getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/conditions'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to add condition');
+    }
+  }
+
   Future<List<dynamic>> getVitals() async {
     final token = await StorageService().getToken();
     final response = await http.get(
@@ -179,6 +196,23 @@ class ApiService {
       return res['data'] ?? [];
     } else {
       throw Exception('Failed to fetch vitals');
+    }
+  }
+
+  Future<Map<String, dynamic>> logVital(Map<String, dynamic> data) async {
+    final token = await StorageService().getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/vitals'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to log vital');
     }
   }
 
