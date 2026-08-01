@@ -3,7 +3,6 @@ import 'screens/dashboard_screen.dart';
 import 'screens/health_hub_screen.dart';
 import 'screens/my_card_screen.dart';
 import 'screens/settings_screen.dart';
-import 'screens/prescription_scanner_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final int initialIndex;
@@ -44,19 +43,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         index: _currentIndex,
         children: screens,
       ),
-      floatingActionButton: _currentIndex == 1
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const PrescriptionScannerScreen()),
-                );
-              },
-              backgroundColor: theme.primaryColor,
-              icon: const Icon(Icons.document_scanner_outlined, color: Colors.white),
-              label: const Text('Scan RX', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            )
-          : null,
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,

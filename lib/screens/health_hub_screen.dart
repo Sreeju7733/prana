@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'prescription_scanner_screen.dart';
 
 class HealthHubScreen extends StatefulWidget {
   const HealthHubScreen({super.key});
@@ -57,25 +58,50 @@ class _HealthHubScreenState extends State<HealthHubScreen> with SingleTickerProv
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Health Hub'),
+        title: const Text(
+          'Health Hub',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF0F172A), letterSpacing: -0.5),
+        ),
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.document_scanner_outlined, color: Color(0xFF0D9488)),
+            tooltip: 'Scan RX',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PrescriptionScannerScreen()),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
+          preferredSize: const Size.fromHeight(56),
           child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            height: 44,
+            padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               color: const Color(0xFFE2E8F0),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: TabBar(
               controller: _tabController,
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
               indicator: BoxDecoration(
-                color: theme.primaryColor,
-                borderRadius: BorderRadius.circular(10),
+                color: const Color(0xFF0D9488),
+                borderRadius: BorderRadius.circular(11),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x1F0D9488), blurRadius: 6, offset: Offset(0, 2)),
+                ],
               ),
               labelColor: Colors.white,
-              unselectedLabelColor: const Color(0xFF64748B),
+              unselectedLabelColor: const Color(0xFF475569),
               labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
               tabs: const [
                 Tab(text: 'Meds'),
                 Tab(text: 'Allergies'),
@@ -90,20 +116,24 @@ class _HealthHubScreenState extends State<HealthHubScreen> with SingleTickerProv
           ? Center(child: CircularProgressIndicator(color: theme.primaryColor))
           : Column(
               children: [
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Search health records...',
-                      prefixIcon: const Icon(Icons.search),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF94A3B8)),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
                       fillColor: Colors.white,
                       filled: true,
-                      border: OutlineInputBorder(
+                      enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: Color(0xFF0D9488), width: 1.5),
                       ),
                     ),
                   ),
@@ -122,11 +152,16 @@ class _HealthHubScreenState extends State<HealthHubScreen> with SingleTickerProv
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddItemModal,
-        backgroundColor: theme.primaryColor,
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: const Text('Add Item', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 12.0),
+        child: FloatingActionButton.extended(
+          onPressed: _showAddItemModal,
+          backgroundColor: const Color(0xFF0D9488),
+          elevation: 4,
+          icon: const Icon(Icons.add_rounded, color: Colors.white),
+          label: const Text('Add Record', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+        ),
       ),
     );
   }
@@ -147,6 +182,8 @@ class _HealthHubScreenState extends State<HealthHubScreen> with SingleTickerProv
   void _showAddMedicationSheet() {
     final nameCtrl = TextEditingController();
     final doseCtrl = TextEditingController();
+    final freqCtrl = TextEditingController(text: 'Daily');
+    final doctorCtrl = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -166,7 +203,15 @@ class _HealthHubScreenState extends State<HealthHubScreen> with SingleTickerProv
             const SizedBox(height: 16),
             TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Medication Name (e.g. Metformin)')),
             const SizedBox(height: 12),
-            TextField(controller: doseCtrl, decoration: const InputDecoration(labelText: 'Dosage (e.g. 500mg BD)')),
+            Row(
+              children: [
+                Expanded(child: TextField(controller: doseCtrl, decoration: const InputDecoration(labelText: 'Dose (e.g. 500mg)'))),
+                const SizedBox(width: 12),
+                Expanded(child: TextField(controller: freqCtrl, decoration: const InputDecoration(labelText: 'Frequency (e.g. BD / 2x Daily)'))),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(controller: doctorCtrl, decoration: const InputDecoration(labelText: 'Prescribed By (Optional Doctor Name)')),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -178,7 +223,8 @@ class _HealthHubScreenState extends State<HealthHubScreen> with SingleTickerProv
                     await _apiService.addMedication({
                       'name': nameCtrl.text.trim(),
                       'dose': doseCtrl.text.trim(),
-                      'frequency': 'Daily',
+                      'frequency': freqCtrl.text.trim(),
+                      'prescribed_by': doctorCtrl.text.trim(),
                       'is_active': true,
                     }).catchError((_) => <String, dynamic>{});
                     _loadHubData();
@@ -358,9 +404,11 @@ class _HealthHubScreenState extends State<HealthHubScreen> with SingleTickerProv
       itemCount: _medications.length,
       itemBuilder: (context, index) {
         final med = _medications[index];
+        final id = med['id']?.toString() ?? '';
         final name = med['name'] ?? 'Medication';
         final dose = med['dose'] ?? '';
-        final freq = med['frequency'] ?? '';
+        final freq = med['frequency'] ?? 'Daily';
+        final doctor = med['prescribed_by'] ?? '';
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -385,19 +433,20 @@ class _HealthHubScreenState extends State<HealthHubScreen> with SingleTickerProv
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('$name $dose'.trim(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text('$name ${dose.isNotEmpty ? "($dose)" : ""}'.trim(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     const SizedBox(height: 2),
-                    Text(freq, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                    Text('Freq: $freq ${doctor.isNotEmpty ? "• Dr. $doctor" : ""}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text('Active', style: TextStyle(color: Color(0xFF15803D), fontWeight: FontWeight.bold, fontSize: 11)),
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
+                onPressed: () async {
+                  if (id.isNotEmpty) {
+                    await _apiService.deleteMedication(id).catchError((_) {});
+                    _loadHubData();
+                  }
+                },
               ),
             ],
           ),
@@ -420,59 +469,81 @@ class _HealthHubScreenState extends State<HealthHubScreen> with SingleTickerProv
         if (critical.isNotEmpty) ...[
           const Text('CRITICAL ALLERGIES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red, letterSpacing: 1)),
           const SizedBox(height: 8),
-          ...critical.map((item) => Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: const Border(left: BorderSide(color: Colors.red, width: 4), top: BorderSide(color: Color(0xFFE2E8F0)), right: BorderSide(color: Color(0xFFE2E8F0)), bottom: BorderSide(color: Color(0xFFE2E8F0))),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('${item['allergen'] ?? 'Allergy'} — SEVERE', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF991B1B), fontSize: 14)),
-                          const SizedBox(height: 2),
-                          Text(item['reaction_description'] ?? 'Anaphylaxis Risk', style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-                        ],
-                      ),
+          ...critical.map((item) {
+            final id = item['id']?.toString() ?? '';
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: const Border(left: BorderSide(color: Colors.red, width: 4), top: BorderSide(color: Color(0xFFE2E8F0)), right: BorderSide(color: Color(0xFFE2E8F0)), bottom: BorderSide(color: Color(0xFFE2E8F0))),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${item['allergen'] ?? 'Allergy'} — SEVERE', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF991B1B), fontSize: 14)),
+                        const SizedBox(height: 2),
+                        Text(item['reaction_description'] ?? 'Anaphylaxis Risk', style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                      ],
                     ),
-                    const Chip(label: Text('Critical', style: TextStyle(color: Colors.white, fontSize: 11)), backgroundColor: Colors.red),
-                  ],
-                ),
-              )),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
+                    onPressed: () async {
+                      if (id.isNotEmpty) {
+                        await _apiService.deleteAllergy(id).catchError((_) {});
+                        _loadHubData();
+                      }
+                    },
+                  ),
+                ],
+              ),
+            );
+          }),
           const SizedBox(height: 16),
         ],
         if (nonCritical.isNotEmpty) ...[
           const Text('OTHER ALLERGIES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.amber, letterSpacing: 1)),
           const SizedBox(height: 8),
-          ...nonCritical.map((item) => Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: const Border(left: BorderSide(color: Colors.amber, width: 4), top: BorderSide(color: Color(0xFFE2E8F0)), right: BorderSide(color: Color(0xFFE2E8F0)), bottom: BorderSide(color: Color(0xFFE2E8F0))),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(item['allergen'] ?? 'Allergy', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          const SizedBox(height: 2),
-                          Text(item['reaction_description'] ?? 'Mild reaction', style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-                        ],
-                      ),
+          ...nonCritical.map((item) {
+            final id = item['id']?.toString() ?? '';
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: const Border(left: BorderSide(color: Colors.amber, width: 4), top: BorderSide(color: Color(0xFFE2E8F0)), right: BorderSide(color: Color(0xFFE2E8F0)), bottom: BorderSide(color: Color(0xFFE2E8F0))),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item['allergen'] ?? 'Allergy', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        const SizedBox(height: 2),
+                        Text(item['reaction_description'] ?? 'Mild reaction', style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                      ],
                     ),
-                    const Chip(label: Text('Moderate'), backgroundColor: Color(0xFFFEF08A)),
-                  ],
-                ),
-              )),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
+                    onPressed: () async {
+                      if (id.isNotEmpty) {
+                        await _apiService.deleteAllergy(id).catchError((_) {});
+                        _loadHubData();
+                      }
+                    },
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ],
     );

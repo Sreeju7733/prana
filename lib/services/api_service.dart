@@ -121,6 +121,17 @@ class ApiService {
     }
   }
 
+  Future<void> deleteMedication(String id) async {
+    final token = await StorageService().getToken();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/medications/$id'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete medication');
+    }
+  }
+
   // --- ALLERGIES ---
   Future<List<dynamic>> getAllergies() async {
     final token = await StorageService().getToken();
@@ -150,6 +161,17 @@ class ApiService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to add allergy');
+    }
+  }
+
+  Future<void> deleteAllergy(String id) async {
+    final token = await StorageService().getToken();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/allergies/$id'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete allergy');
     }
   }
 
