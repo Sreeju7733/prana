@@ -24,9 +24,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final List<String> _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
   // Step 2: Critical Allergies
+  bool _hasKnownAllergies = false;
   final _allergyController = TextEditingController();
-  String _allergySeverity = 'severe';
+  String _selectedReaction = '';
+  String _allergySeverity = 'Severe';
+  int? _editingAllergyIndex;
   final List<Map<String, String>> _allergiesList = [];
+
+  final List<String> _quickAddAllergies = [
+    'Penicillin',
+    'Peanuts',
+    'Shellfish',
+    'Eggs',
+    'Milk',
+    'Latex',
+    'Bee Sting',
+    'Dust',
+  ];
+
+  final List<String> _commonAllergies = [
+    'Penicillin',
+    'Amoxicillin',
+    'Ampicillin',
+    'Peanuts',
+    'Shellfish',
+    'Eggs',
+    'Milk',
+    'Latex',
+    'Bee Sting',
+    'Dust',
+    'Sulfa Drugs',
+    'Aspirin',
+    'Ibuprofen',
+    'Contrast Dye',
+  ];
+
+  final List<String> _commonReactions = [
+    'Rash',
+    'Hives',
+    'Swelling',
+    'Anaphylaxis',
+    'Trouble breathing',
+    'Vomiting',
+    'Sneezing',
+    'Itchy eyes',
+    'Loss of consciousness',
+  ];
 
   // Step 3: Medications
   final _medNameController = TextEditingController();
@@ -72,6 +115,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _saveOrAddAllergy() {
+    final name = _allergyController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter an allergy name')),
+      );
+      return;
+    }
+
+    final allergyData = {
+      'name': name,
+      'severity': _allergySeverity,
+      'reaction': _selectedReaction,
+    };
+
+    setState(() {
+      if (_editingAllergyIndex != null && _editingAllergyIndex! < _allergiesList.length) {
+        _allergiesList[_editingAllergyIndex!] = allergyData;
+        _editingAllergyIndex = null;
+      } else {
+        _allergiesList.add(allergyData);
+      }
+      _allergyController.clear();
+      _selectedReaction = '';
+      _allergySeverity = 'Severe';
+    });
+  }
+
   void _submitProfileWizard() async {
     setState(() => _isLoading = true);
     try {
@@ -84,12 +155,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
 
       // 2. Post Allergies
-      for (var a in _allergiesList) {
-        await _apiService.addAllergy({
-          'allergen': a['allergen'],
-          'severity': a['severity'],
-          'is_critical': a['severity'] == 'severe',
-        }).catchError((_) => <String, dynamic>{});
+      if (_hasKnownAllergies) {
+        for (var a in _allergiesList) {
+          final severityLower = (a['severity'] ?? 'Severe').toLowerCase();
+          await _apiService.addAllergy({
+            'allergen': a['name'] ?? '',
+            'severity': severityLower,
+            'reaction_description': a['reaction']?.isNotEmpty == true ? a['reaction'] : null,
+            'is_critical': severityLower == 'severe',
+          }).catchError((_) => <String, dynamic>{});
+        }
       }
 
       // 3. Post Medications
@@ -235,6 +310,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> _selectDateOfBirth(BuildContext context) async {
+    DateTime initialDate = DateTime(2000, 1, 1);
+    if (_dobController.text.isNotEmpty) {
+      try {
+        initialDate = DateTime.parse(_dobController.text.trim());
+      } catch (_) {}
+    }
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Theme.of(context).primaryColor,
+              onPrimary: Colors.white,
+              onSurface: const Color(0xFF0F172A),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      final formatted = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+      setState(() {
+        _dobController.text = formatted;
+      });
+    }
+  }
+
   // --- STEP 1: BASIC INFO & BLOOD GROUP GRID ---
   Widget _buildStep1BasicInfo() {
     return SingleChildScrollView(
@@ -264,6 +374,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: TextFormField(
                   controller: _dobController,
+                  readOnly: true,
+                  onTap: () => _selectDateOfBirth(context),
                   decoration: const InputDecoration(
                     labelText: 'Date of Birth',
                     hintText: 'YYYY-MM-DD',
@@ -275,11 +387,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: DropdownButtonFormField<String>(
                   initialValue: _selectedGender,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Gender'),
                   items: const [
-                    DropdownMenuItem(value: 'M', child: Text('Male')),
-                    DropdownMenuItem(value: 'F', child: Text('Female')),
-                    DropdownMenuItem(value: 'Other', child: Text('Other')),
+                    DropdownMenuItem(value: 'M', child: Text('Male', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(value: 'F', child: Text('Female', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(value: 'Other', child: Text('Other', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(value: 'Prefer not to say', child: Text('Prefer not to say', overflow: TextOverflow.ellipsis)),
                   ],
                   onChanged: (val) => setState(() => _selectedGender = val!),
                 ),
@@ -354,89 +468,421 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 6),
           const Text('Flag any severe reactions (Penicillin, Peanuts, Latex, etc.)', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // Red-Flagged Allergy Input Box
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEF2F2),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFFCA5A5)),
-            ),
-            child: Column(
-              children: [
-                TextFormField(
-                  controller: _allergyController,
-                  decoration: const InputDecoration(
-                    labelText: 'Allergen Name',
-                    hintText: 'e.g. Penicillin or Peanuts',
-                    fillColor: Colors.white,
-                    filled: true,
-                    prefixIcon: Icon(Icons.shield_outlined, color: Colors.red),
+          // Selection Radio Toggle Cards: No Known Allergies vs I Have Allergies
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _hasKnownAllergies = false),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: !_hasKnownAllergies ? const Color(0xFFF0FDF4) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: !_hasKnownAllergies ? const Color(0xFF22C55E) : const Color(0xFFE2E8F0),
+                        width: !_hasKnownAllergies ? 2 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          !_hasKnownAllergies ? Icons.radio_button_checked : Icons.radio_button_off,
+                          color: !_hasKnownAllergies ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'No Known Allergies',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Text('Severity: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    const Spacer(),
-                    ChoiceChip(
-                      label: const Text('Severe'),
-                      selected: _allergySeverity == 'severe',
-                      selectedColor: Colors.red,
-                      labelStyle: TextStyle(color: _allergySeverity == 'severe' ? Colors.white : Colors.black),
-                      onSelected: (val) => setState(() => _allergySeverity = 'severe'),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _hasKnownAllergies = true),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: _hasKnownAllergies ? const Color(0xFFFEF2F2) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _hasKnownAllergies ? const Color(0xFFEF4444) : const Color(0xFFE2E8F0),
+                        width: _hasKnownAllergies ? 2 : 1,
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    ChoiceChip(
-                      label: const Text('Moderate'),
-                      selected: _allergySeverity == 'moderate',
-                      selectedColor: Colors.amber,
-                      labelStyle: TextStyle(color: _allergySeverity == 'moderate' ? Colors.white : Colors.black),
-                      onSelected: (val) => setState(() => _allergySeverity = 'moderate'),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _hasKnownAllergies ? Icons.radio_button_checked : Icons.radio_button_off,
+                          color: _hasKnownAllergies ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'I Have Allergies',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 12),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
-                  onPressed: () {
-                    final text = _allergyController.text.trim();
-                    if (text.isNotEmpty) {
-                      setState(() {
-                        _allergiesList.add({'allergen': text, 'severity': _allergySeverity});
-                        _allergyController.clear();
-                      });
-                    }
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Allergy Chip'),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
 
-          // Added Allergy Chips
-          if (_allergiesList.isNotEmpty) ...[
-            const Text('ADDED ALLERGIES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-            const SizedBox(height: 12),
+          // If "No Known Allergies" is selected
+          if (!_hasKnownAllergies) ...[
+            const SizedBox(height: 32),
+            Container(
+              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
+              ),
+              child: const Row(
+                children: [
+                  Text('✅ ', style: TextStyle(fontSize: 20)),
+                  Expanded(
+                    child: Text(
+                      'No known allergies recorded.',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF15803D),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            // If "I Have Allergies" is selected
+            const SizedBox(height: 24),
+            const Text(
+              'Common quick-add chips',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _allergiesList
-                  .map(
-                    (a) => Chip(
-                      backgroundColor: a['severity'] == 'severe' ? const Color(0xFFFEE2E2) : const Color(0xFFFEF3C7),
-                      side: BorderSide(color: a['severity'] == 'severe' ? Colors.red : Colors.amber),
-                      avatar: Icon(Icons.warning_rounded, size: 16, color: a['severity'] == 'severe' ? Colors.red : Colors.amber.shade800),
-                      label: Text('${a['allergen']} (${a['severity']})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                      onDeleted: () => setState(() => _allergiesList.remove(a)),
-                    ),
-                  )
-                  .toList(),
+              children: _quickAddAllergies.map((allergy) {
+                return ActionChip(
+                  avatar: const Text('+', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
+                  label: Text(allergy, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0xFFCBD5E1)),
+                  onPressed: () {
+                    setState(() {
+                      _allergyController.text = allergy;
+                    });
+                  },
+                );
+              }).toList(),
             ),
+
+            const SizedBox(height: 20),
+            const Text('Allergy Name', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _allergyController,
+              decoration: const InputDecoration(
+                hintText: 'e.g. Penicillin or Peanuts',
+                prefixIcon: Icon(Icons.shield_outlined, color: Colors.red),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+
+            // Autocomplete / Suggestions list when typing
+            if (_allergyController.text.isNotEmpty &&
+                _commonAllergies.any((a) => a.toLowerCase().startsWith(_allergyController.text.toLowerCase()) && a.toLowerCase() != _allergyController.text.toLowerCase())) ...[
+              const SizedBox(height: 6),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 4))],
+                ),
+                child: Column(
+                  children: _commonAllergies
+                      .where((a) => a.toLowerCase().startsWith(_allergyController.text.toLowerCase()) && a.toLowerCase() != _allergyController.text.toLowerCase())
+                      .take(4)
+                      .map((suggestion) => ListTile(
+                            dense: true,
+                            title: Text(suggestion, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            onTap: () {
+                              setState(() {
+                                _allergyController.text = suggestion;
+                              });
+                            },
+                          ))
+                      .toList(),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 16),
+            const Text('Reaction (Optional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedReaction,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                hintText: 'Rash, Swelling, Anaphylaxis...',
+                filled: true,
+                fillColor: Colors.white,
+                prefixIcon: Icon(Icons.medical_information_outlined, color: Color(0xFF64748B)),
+              ),
+              items: [
+                const DropdownMenuItem(value: '', child: Text('None / Unspecified', style: TextStyle(color: Colors.grey))),
+                ..._commonReactions.map((r) => DropdownMenuItem(value: r, child: Text(r, overflow: TextOverflow.ellipsis))),
+              ],
+              onChanged: (val) => setState(() => _selectedReaction = val ?? ''),
+            ),
+
+            const SizedBox(height: 20),
+            const Text('Severity', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+            const SizedBox(height: 10),
+
+            // 3-Level Severity Selector Cards
+            Row(
+              children: [
+                // 🟢 Mild
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _allergySeverity = 'Mild'),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: _allergySeverity == 'Mild' ? const Color(0xFFDCFCE7) : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: _allergySeverity == 'Mild' ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+                          width: _allergySeverity == 'Mild' ? 2 : 1,
+                        ),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text('🟢', style: TextStyle(fontSize: 14)),
+                              SizedBox(width: 4),
+                              Text('Mild', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF166534))),
+                            ],
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            '• Sneezing\n• Itchy eyes\n• Mild rash',
+                            style: TextStyle(fontSize: 10, color: Color(0xFF475569), height: 1.3),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // 🟠 Moderate
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _allergySeverity = 'Moderate'),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: _allergySeverity == 'Moderate' ? const Color(0xFFFFEDD5) : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: _allergySeverity == 'Moderate' ? const Color(0xFFEA580C) : const Color(0xFFE2E8F0),
+                          width: _allergySeverity == 'Moderate' ? 2 : 1,
+                        ),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text('🟠', style: TextStyle(fontSize: 14)),
+                              SizedBox(width: 4),
+                              Text('Moderate', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF9A3412))),
+                            ],
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            '• Hives\n• Vomiting\n• Swelling',
+                            style: TextStyle(fontSize: 10, color: Color(0xFF475569), height: 1.3),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // 🔴 Severe
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _allergySeverity = 'Severe'),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: _allergySeverity == 'Severe' ? const Color(0xFFFEE2E2) : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: _allergySeverity == 'Severe' ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0),
+                          width: _allergySeverity == 'Severe' ? 2 : 1,
+                        ),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text('🔴', style: TextStyle(fontSize: 14)),
+                              SizedBox(width: 4),
+                              Text('Severe', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF991B1B))),
+                            ],
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            '• Breathing issue\n• Anaphylaxis\n• Unconscious',
+                            style: TextStyle(fontSize: 10, color: Color(0xFF475569), height: 1.3),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _editingAllergyIndex != null ? const Color(0xFF0284C7) : const Color(0xFFDC2626),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: _saveOrAddAllergy,
+                icon: Icon(_editingAllergyIndex != null ? Icons.check : Icons.add),
+                label: Text(_editingAllergyIndex != null ? 'Update Allergy' : '+ Add Allergy', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              ),
+            ),
+
+            // Added Allergy Cards with Edit & Delete Actions
+            if (_allergiesList.isNotEmpty) ...[
+              const SizedBox(height: 28),
+              const Text('ADDED ALLERGIES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B), letterSpacing: 0.5)),
+              const SizedBox(height: 12),
+              ..._allergiesList.asMap().entries.map((entry) {
+                final index = entry.key;
+                final a = entry.value;
+                final severity = a['severity'] ?? 'Severe';
+                final reaction = a['reaction'];
+                final isSevere = severity.toLowerCase() == 'severe';
+                final isModerate = severity.toLowerCase() == 'moderate';
+
+                final dotEmoji = isSevere ? '🔴' : (isModerate ? '🟠' : '🟢');
+                final cardBg = isSevere ? const Color(0xFFFEF2F2) : (isModerate ? const Color(0xFFFFF7ED) : const Color(0xFFF0FDF4));
+                final borderColor = isSevere ? const Color(0xFFFCA5A5) : (isModerate ? const Color(0xFFFDBA74) : const Color(0xFF86EFAC));
+
+                final subtitleText = (reaction != null && reaction.isNotEmpty)
+                    ? '$severity • $reaction'
+                    : severity;
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(dotEmoji, style: const TextStyle(fontSize: 18)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              a['name'] ?? '',
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF0F172A)),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              subtitleText,
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF475569)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        icon: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF0284C7)),
+                        label: const Text('Edit', style: TextStyle(fontSize: 12, color: Color(0xFF0284C7), fontWeight: FontWeight.bold)),
+                        onPressed: () {
+                          setState(() {
+                            _editingAllergyIndex = index;
+                            _allergyController.text = a['name'] ?? '';
+                            _selectedReaction = a['reaction'] ?? '';
+                            _allergySeverity = a['severity'] ?? 'Severe';
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFEF4444)),
+                        label: const Text('Delete', style: TextStyle(fontSize: 12, color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+                        onPressed: () {
+                          setState(() {
+                            _allergiesList.removeAt(index);
+                            if (_editingAllergyIndex == index) {
+                              _editingAllergyIndex = null;
+                              _allergyController.clear();
+                              _selectedReaction = '';
+                              _allergySeverity = 'Severe';
+                            }
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
           ],
         ],
       ),

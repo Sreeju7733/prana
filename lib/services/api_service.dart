@@ -183,6 +183,23 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> updateAllergy(String id, Map<String, dynamic> data) async {
+    final token = await StorageService().getToken();
+    final response = await http.patch(
+      Uri.parse('$baseUrl/api/allergies/$id'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to update allergy');
+    }
+  }
+
   Future<void> deleteAllergy(String id) async {
     final token = await StorageService().getToken();
     final response = await http.delete(
