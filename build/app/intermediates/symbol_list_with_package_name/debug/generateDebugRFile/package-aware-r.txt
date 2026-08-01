@@ -1,5 +1,6 @@
 com.example.prana
 drawable launch_background
+drawable splash_logo
 mipmap ic_launcher
 mipmap ic_launcher_round
 style LaunchTheme
