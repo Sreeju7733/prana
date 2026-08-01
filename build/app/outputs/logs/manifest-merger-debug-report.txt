@@ -1,6 +1,6 @@
 -- Merging decision tree log ---
 application
-INJECTED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:2:5-33:19
+INJECTED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:3:5-35:19
 INJECTED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/debug/AndroidManifest.xml
 MERGED from [androidx.window:window:1.2.0] /home/sreeju/.gradle/caches/9.1.0/transforms/f545985eb0b16189f23b141b02b35f52/transformed/window-1.2.0/AndroidManifest.xml:22:5-29:19
 MERGED from [androidx.window:window:1.2.0] /home/sreeju/.gradle/caches/9.1.0/transforms/f545985eb0b16189f23b141b02b35f52/transformed/window-1.2.0/AndroidManifest.xml:22:5-29:19
@@ -21,8 +21,8 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/sreej
 	android:name
 		INJECTED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml
 manifest
-ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:1:1-45:12
-MERGED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:1:1-45:12
+ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:1:1-47:12
+MERGED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:1:1-47:12
 INJECTED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/debug/AndroidManifest.xml:1:1-7:12
 INJECTED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/debug/AndroidManifest.xml:1:1-7:12
 INJECTED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/debug/AndroidManifest.xml:1:1-7:12
@@ -65,22 +65,24 @@ MERGED from [com.getkeepsafe.relinker:relinker:1.4.5] /home/sreeju/.gradle/cache
 		INJECTED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/debug/AndroidManifest.xml
 	xmlns:android
 		ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:1:11-69
-queries
-ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:39:5-44:15
-intent#action:name:android.intent.action.PROCESS_TEXT+data:mimeType:text/plain
-ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:40:9-43:18
-action#android.intent.action.PROCESS_TEXT
-ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:41:13-72
-	android:name
-		ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:41:21-70
-data
-ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:42:13-50
-	android:mimeType
-		ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:42:19-48
 uses-permission#android.permission.INTERNET
-ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/debug/AndroidManifest.xml:6:5-66
+ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:2:5-67
+MERGED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:2:5-67
+MERGED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:2:5-67
 	android:name
-		ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/debug/AndroidManifest.xml:6:22-64
+		ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:2:22-64
+queries
+ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:41:5-46:15
+intent#action:name:android.intent.action.PROCESS_TEXT+data:mimeType:text/plain
+ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:42:9-45:18
+action#android.intent.action.PROCESS_TEXT
+ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:43:13-72
+	android:name
+		ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:43:21-70
+data
+ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:44:13-50
+	android:mimeType
+		ADDED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/main/AndroidManifest.xml:44:19-48
 uses-sdk
 INJECTED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/debug/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /home/sreeju/AndroidStudioProjects/prana/android/app/src/debug/AndroidManifest.xml

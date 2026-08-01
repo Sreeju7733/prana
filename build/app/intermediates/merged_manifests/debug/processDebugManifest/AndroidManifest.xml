@@ -40,7 +40,8 @@
         android:debuggable="true"
         android:extractNativeLibs="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="prana" >
+        android:label="prana"
+        android:usesCleartextTraffic="true" >
         <activity
             android:name="com.example.prana.MainActivity"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"

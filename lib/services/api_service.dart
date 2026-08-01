@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  final String baseUrl = "http://10.97.134.37:3000";
+  final String baseUrl = "http://192.168.1.27:3000";
 
   Future<Map<String, dynamic>> sendOtp(String phoneNumber) async {
     final response = await http.post(
