@@ -163,7 +163,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
                     title: const Text('Card Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     subtitle: Text(_cardActive ? 'Active & Scannable' : 'Suspended', style: TextStyle(fontSize: 12, color: _cardActive ? Colors.green : Colors.red)),
                     value: _cardActive,
-                    activeColor: theme.primaryColor,
+                    activeThumbColor: theme.primaryColor,
                     onChanged: (val) => setState(() => _cardActive = val),
                   ),
                   const Divider(height: 1),

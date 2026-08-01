@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'health_hub_screen.dart';
-import 'my_card_screen.dart';
 import 'prescription_scanner_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -13,8 +11,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  bool _cardStatusTapped = false;
-  bool _hasCriticalAllergy = true; // Set to true to show allergy card / toggle banner
+  final bool _hasCriticalAllergy = true; // Set to true to show allergy card / toggle banner
 
   void _copyPranaId() {
     Clipboard.setData(const ClipboardData(text: "PRAN-7843-2910"));
@@ -790,7 +787,7 @@ class _AddMedicationBottomSheetState extends State<AddMedicationBottomSheet> {
               const Text(
                 '⚠️ CRITICAL INTERACTION DETECTED',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.black, fontSize: 16, letterSpacing: 1),
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1),
               ),
               const SizedBox(height: 12),
               Text(
