@@ -13,7 +13,6 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final ApiService _apiService = ApiService();
-  bool _isLoading = true;
 
   Map<String, dynamic>? _profile;
   List<dynamic> _medications = [];
@@ -28,29 +27,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _fetchDashboardData() async {
-    setState(() => _isLoading = true);
     try {
-      final results = await Future.wait([
-        _apiService.getProfile().catchError((_) => <String, dynamic>{}),
-        _apiService.getMedications().catchError((_) => <dynamic>[]),
-        _apiService.getAllergies().catchError((_) => <dynamic>[]),
-        _apiService.getConditions().catchError((_) => <dynamic>[]),
-        _apiService.getEmergencyBriefing().catchError((_) => <String, dynamic>{}),
-      ]);
+      final profileRes = await _apiService.getProfile();
+      final medsRes = await _apiService.getMedications().catchError((_) => <dynamic>[]);
+      final allergiesRes = await _apiService.getAllergies().catchError((_) => <dynamic>[]);
+      final conditionsRes = await _apiService.getConditions().catchError((_) => <dynamic>[]);
+      final briefingRes = await _apiService.getEmergencyBriefing().catchError((_) => <String, dynamic>{});
 
       if (mounted) {
         setState(() {
-          _profile = results[0] as Map<String, dynamic>?;
-          _medications = results[1] as List<dynamic>;
-          _allergies = results[2] as List<dynamic>;
-          _conditions = results[3] as List<dynamic>;
-          _briefing = results[4] as Map<String, dynamic>?;
-          _isLoading = false;
+          _profile = profileRes;
+          _medications = medsRes;
+          _allergies = allergiesRes;
+          _conditions = conditionsRes;
+          _briefing = briefingRes;
         });
       }
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+    } catch (_) {}
+  }
+
+  String _getUserFirstName() {
+    final data = _profile?['data'];
+    if (data != null) {
+      final String? fullName = data['full_name'];
+      if (fullName != null && fullName.trim().isNotEmpty) {
+        return fullName.trim().split(' ').first;
+      }
+      final String? phone = data['phone'];
+      if (phone != null && phone.isNotEmpty) {
+        return phone;
+      }
     }
+    return 'User';
   }
 
   void _copyPranaId() {
@@ -155,20 +163,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
                         CircleAvatar(
                           radius: 28,
-                          backgroundColor: Color(0xFF0D9488),
-                          child: Text('B+', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                          backgroundColor: const Color(0xFF0D9488),
+                          child: Text(_profile?['data']?['blood_group'] ?? 'B+', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
                         ),
-                        SizedBox(width: 16),
+                        const SizedBox(width: 16),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('John Doe', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            Text('Male • 29 yrs (DOB: 15 May 1995)', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
-                            Text('PRANA ID: PRAN-7843-2910', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w600, color: Color(0xFF0D9488))),
+                            Text(_profile?['data']?['full_name'] ?? 'User', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            Text('${_profile?['data']?['gender'] ?? 'M'} • DOB: ${_profile?['data']?['date_of_birth'] ?? '15 May 1995'}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                            Text('PRANA ID: ${_profile?['data']?['prana_id'] ?? "PRAN-7843-2910"}', style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w600, color: Color(0xFF0D9488))),
                           ],
                         ),
                       ],
@@ -333,30 +341,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (_isLoading)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: LinearProgressIndicator(
-                    color: theme.primaryColor,
-                    backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
-                  ),
-                ),
               // Top User Greeting & Header Bar
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Text('Hello, John', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5)),
-                          SizedBox(width: 6),
-                          Text('👋', style: TextStyle(fontSize: 18)),
+                          Text(
+                            'Hello, ${_getUserFirstName()}',
+                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text('👋', style: TextStyle(fontSize: 18)),
                         ],
                       ),
-                      SizedBox(height: 2),
-                      Text('Your Medical Identity is Active', style: TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 2),
+                      const Text('Your Medical Identity is Active', style: TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w500)),
                     ],
                   ),
                   Row(
@@ -377,9 +380,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             children: [
                               Icon(Icons.badge_outlined, size: 16, color: theme.primaryColor),
                               const SizedBox(width: 4),
-                              const Text(
-                                'PRAN-7843',
-                                style: TextStyle(
+                              Text(
+                                _profile?['data']?['prana_id'] ?? 'PRAN-7843',
+                                style: const TextStyle(
                                   fontFamily: 'monospace',
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
@@ -609,51 +612,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-
-              // Recent Activity Timeline
-              Text(
-                'LAST 7 DAYS',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Column(
-                  children: [
-                    _buildTimelineItem(
-                      title: 'Added Metformin 500mg',
-                      subtitle: 'Yesterday • Prescription auto-scan',
-                      icon: Icons.medication_outlined,
-                      color: const Color(0xFF0284C7),
-                      isFirst: true,
-                    ),
-                    _buildTimelineItem(
-                      title: 'BP Logged: 128/82 mmHg',
-                      subtitle: '3 days ago • Vital Tracker',
-                      icon: Icons.favorite_outline,
-                      color: const Color(0xFFEC4899),
-                    ),
-                    _buildTimelineItem(
-                      title: 'Card Scanned by EMD-4521',
-                      subtitle: '5 days ago • AIIMS Delhi',
-                      icon: Icons.qr_code_scanner,
-                      color: const Color(0xFF10B981),
-                      isLast: true,
-                    ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 20),
             ],
           ),
@@ -705,50 +663,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildTimelineItem({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    bool isFirst = false,
-    bool isLast = false,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 16),
-            ),
-            if (!isLast)
-              Container(
-                width: 2,
-                height: 32,
-                color: const Color(0xFFE2E8F0),
-              ),
-          ],
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
-              const SizedBox(height: 2),
-              Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-              const SizedBox(height: 14),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+
 
   void _showAddMedicationSheet(BuildContext context) {
     showModalBottomSheet(
