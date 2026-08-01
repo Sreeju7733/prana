@@ -138,9 +138,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         initialValue: _selectedGender,
+                        isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Gender',
                           prefixIcon: Icon(Icons.wc_outlined),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                         ),
                         dropdownColor: Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -148,19 +150,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         items: _genders.entries.map((e) {
                           return DropdownMenuItem(
                             value: e.key,
-                            child: Text(e.value, style: const TextStyle(fontSize: 15)),
+                            child: Text(
+                              e.value,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 14),
+                            ),
                           );
                         }).toList(),
                         onChanged: (val) => setState(() => _selectedGender = val!),
                       ),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         initialValue: _selectedBloodGroup,
+                        isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Blood Group',
                           prefixIcon: Icon(Icons.bloodtype_outlined),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                         ),
                         dropdownColor: Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -168,7 +176,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         items: _bloodGroups.map((bg) {
                           return DropdownMenuItem(
                             value: bg,
-                            child: Text(bg, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                            child: Text(
+                              bg,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                            ),
                           );
                         }).toList(),
                         onChanged: (val) => setState(() => _selectedBloodGroup = val!),

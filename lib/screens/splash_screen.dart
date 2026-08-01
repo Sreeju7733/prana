@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/storage_service.dart';
+import 'dashboard_screen.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -17,7 +19,15 @@ class _SplashScreenState extends State<SplashScreen> {
 
   _navigateToNext() async {
     await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
+    if (!mounted) return;
+
+    final token = await StorageService().getToken();
+    if (token != null && token.isNotEmpty) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+      );
+    } else {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const OnboardingScreen()),
