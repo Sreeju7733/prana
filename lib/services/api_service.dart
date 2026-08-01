@@ -182,17 +182,40 @@ class ApiService {
     }
   }
 
-  // --- BRIEFING & CARD SECURITY ---
-  Future<Map<String, dynamic>> getEmergencyBriefing() async {
+  // --- DASHBOARD HYDRATION ---
+  Future<Map<String, dynamic>> getDashboard() async {
     final token = await StorageService().getToken();
     final response = await http.get(
-      Uri.parse('$baseUrl/api/patient/briefing'),
+      Uri.parse('$baseUrl/api/dashboard'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final res = jsonDecode(response.body);
+      return res['data'] ?? {};
     } else {
-      throw Exception('Failed to fetch briefing');
+      throw Exception('Failed to hydrate dashboard');
+    }
+  }
+
+  // --- BRIEFING REGENERATION ---
+  Future<Map<String, dynamic>> regenerateBriefing() async {
+    final token = await StorageService().getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/briefing/regenerate'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({}),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else if (response.statusCode == 429) {
+      final res = jsonDecode(response.body);
+      throw Exception(res['error']?['message'] ?? 'Rate limited. Please wait a few minutes.');
+    } else {
+      final res = jsonDecode(response.body);
+      throw Exception(res['error']?['message'] ?? 'Failed to regenerate briefing');
     }
   }
 
