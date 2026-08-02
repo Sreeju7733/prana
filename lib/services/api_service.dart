@@ -2,6 +2,31 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'storage_service.dart';
 
+class HealthCacheManager {
+  static Map<String, dynamic>? dashboardData;
+  static List<dynamic>? emergencyModalPayload;
+  static List<dynamic>? medications;
+  static List<dynamic>? allergies;
+  static List<dynamic>? conditions;
+  static List<dynamic>? surgeries;
+  static List<dynamic>? devices;
+  static List<dynamic>? vitals;
+
+  static bool isDirty = true;
+
+  static void invalidate() {
+    isDirty = true;
+    dashboardData = null;
+    emergencyModalPayload = null;
+    medications = null;
+    allergies = null;
+    conditions = null;
+    surgeries = null;
+    devices = null;
+    vitals = null;
+  }
+}
+
 class ApiService {
   final String baseUrl = "http://192.168.1.27:3000";
 
@@ -102,14 +127,19 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
+      HealthCacheManager.invalidate();
       return jsonDecode(response.body) as Map<String, dynamic>;
     } else {
       final errorData = jsonDecode(response.body);
       throw Exception(errorData['error'] ?? 'Failed to update profile');
     }
   }
+
   // --- MEDICATIONS ---
-  Future<List<dynamic>> getMedications() async {
+  Future<List<dynamic>> getMedications({bool forceRefresh = false}) async {
+    if (!forceRefresh && !HealthCacheManager.isDirty && HealthCacheManager.medications != null) {
+      return HealthCacheManager.medications!;
+    }
     final token = await StorageService().getToken();
     final response = await http.get(
       Uri.parse('$baseUrl/api/medications'),
@@ -117,7 +147,9 @@ class ApiService {
     );
     if (response.statusCode == 200) {
       final res = jsonDecode(response.body);
-      return res['data'] ?? [];
+      final list = (res['data'] ?? []) as List<dynamic>;
+      HealthCacheManager.medications = list;
+      return list;
     } else {
       throw Exception('Failed to fetch medications');
     }
@@ -134,6 +166,7 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
+      HealthCacheManager.invalidate();
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to add medication');
@@ -146,13 +179,18 @@ class ApiService {
       Uri.parse('$baseUrl/api/medications/$id'),
       headers: {'Authorization': 'Bearer $token'},
     );
-    if (response.statusCode != 200 && response.statusCode != 204) {
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      HealthCacheManager.invalidate();
+    } else {
       throw Exception('Failed to delete medication');
     }
   }
 
   // --- ALLERGIES ---
-  Future<List<dynamic>> getAllergies() async {
+  Future<List<dynamic>> getAllergies({bool forceRefresh = false}) async {
+    if (!forceRefresh && !HealthCacheManager.isDirty && HealthCacheManager.allergies != null) {
+      return HealthCacheManager.allergies!;
+    }
     final token = await StorageService().getToken();
     final response = await http.get(
       Uri.parse('$baseUrl/api/allergies'),
@@ -160,7 +198,9 @@ class ApiService {
     );
     if (response.statusCode == 200) {
       final res = jsonDecode(response.body);
-      return res['data'] ?? [];
+      final list = (res['data'] ?? []) as List<dynamic>;
+      HealthCacheManager.allergies = list;
+      return list;
     } else {
       throw Exception('Failed to fetch allergies');
     }
@@ -177,6 +217,7 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
+      HealthCacheManager.invalidate();
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to add allergy');
