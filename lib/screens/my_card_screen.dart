@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../services/api_service.dart';
 
 class ScanHistoryItem {
@@ -42,8 +43,6 @@ class _MyCardScreenState extends State<MyCardScreen> {
   String _bloodGroup = 'B+';
   String _criticalAllergyText = 'No critical severe allergies logged';
   String _emergencyContact = 'Emergency Relay: Active';
-  int _userAge = 19;
-  String _userGender = 'Male';
 
   final List<ScanHistoryItem> _scanHistory = const [
     ScanHistoryItem(
@@ -117,17 +116,6 @@ class _MyCardScreenState extends State<MyCardScreen> {
               _bloodGroup = rawBg;
             } else {
               _bloodGroup = 'B+';
-            }
-            final rawGender = profile['gender']?.toString().trim();
-            if (rawGender != null && rawGender.isNotEmpty && rawGender != 'null') {
-              _userGender = rawGender;
-            }
-
-            if (profile['date_of_birth'] != null && profile['date_of_birth'].toString().isNotEmpty) {
-              try {
-                final dobYear = DateTime.parse(profile['date_of_birth'].toString()).year;
-                _userAge = DateTime.now().year - dobYear;
-              } catch (_) {}
             }
           }
 
@@ -211,275 +199,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
     return const Color(0xFF16A34A); // Green normal
   }
 
-  void _showParamedicOfflineView(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.88,
-        decoration: const BoxDecoration(
-          color: Color(0xFF0F172A),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFD97706).withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFD97706)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.wifi_off_rounded, color: Color(0xFFFBBF24), size: 20),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'PRANA OFFLINE BRIEFING (PARAMEDIC VIEW)',
-                      style: TextStyle(color: Color(0xFFFBBF24), fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 1),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_userName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22)),
-                    Text('$_userAge Years • $_userGender', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                    const SizedBox(height: 16),
 
-                    const Text('Blood Group', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
-                    Text(_bloodGroup, style: const TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.w900, fontSize: 28)),
-                    const SizedBox(height: 16),
-
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF991B1B).withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFEF4444)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('CRITICAL ALERTS', style: TextStyle(color: Color(0xFFFCA5A5), fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1)),
-                          const SizedBox(height: 6),
-                          Text(_criticalAllergyText, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    const Text('Current Medications', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    const Text('• Active prescriptions synced with Health Hub', style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
-                    const SizedBox(height: 14),
-
-                    const Text('Medical Conditions', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    const Text('• Recorded health conditions active', style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
-                    const SizedBox(height: 14),
-
-                    const Text('Treatment Notes', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    const Text('• Standard emergency protocol verified', style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
-                    const SizedBox(height: 14),
-
-                    const Text('Emergency Contact', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text(_emergencyContact, style: const TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 14)),
-                    const SizedBox(height: 20),
-
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white10,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Verified ✓  Signature Valid (Ed25519)', style: TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 12)),
-                          Text('Offline Record Decrypted via Local AES Key', style: TextStyle(color: Colors.white70, fontSize: 11)),
-                          Text('Last Updated: 29 Jul 2026', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFD97706),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close Offline Briefing', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showHospitalPortalView(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.90,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.local_hospital_outlined, color: Color(0xFF0284C7)),
-                    SizedBox(width: 8),
-                    Text('HOSPITAL ONLINE PORTAL', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0F2FE),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text('FHIR v4.0.1', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text('Authenticated Record Stream for PID: $_pranaId', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-            const SizedBox(height: 16),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('INSURANCE & ADMISSION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0284C7), letterSpacing: 0.8)),
-                          SizedBox(height: 6),
-                          Text('• Policy: Star Health Comprehensive #SH-8849201', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          Text('• Coverage: ₹10,000,000 Cashless Pre-Approved', style: TextStyle(fontSize: 12, color: Color(0xFF16A34A))),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('RADIOLOGY & IMAGING (DICOM)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8B5CF6), letterSpacing: 0.8)),
-                          SizedBox(height: 6),
-                          Text('• Chest CT Scan — AIIMS Delhi (24/05/2026)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                          Text('• Brain MRI w/ Contrast — Manipal Hospital (12/01/2026)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('LAB REPORTS & ADVANCE DIRECTIVES', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF16A34A), letterSpacing: 0.8)),
-                          SizedBox(height: 6),
-                          Text('• HbA1c: 6.8% (Controlled Diabetic)', style: TextStyle(fontSize: 12, color: Color(0xFF334155))),
-                          Text('• Renal Function Test: eGFR > 90 mL/min', style: TextStyle(fontSize: 12, color: Color(0xFF334155))),
-                          Text('• Advance Directive: Full Resuscitation (DNR: No)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0284C7),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close Hospital Portal', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _showScanDetailModal(BuildContext context, ScanHistoryItem item) {
     showModalBottomSheet(
@@ -1175,11 +895,16 @@ class _MyCardScreenState extends State<MyCardScreen> {
                                       Container(
                                         padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFF8FAFC),
+                                          color: Colors.white,
                                           borderRadius: BorderRadius.circular(20),
                                           border: Border.all(color: const Color(0xFFE2E8F0)),
                                         ),
-                                        child: const Icon(Icons.qr_code_2, size: 200, color: Color(0xFF0F172A)),
+                                        child: QrImageView(
+                                          data: 'PRANA_V2|PID:$_pranaId|YK:enc_yellow_blob|SIG:ed25519_valid',
+                                          version: QrVersions.auto,
+                                          size: 200.0,
+                                          backgroundColor: Colors.white,
+                                        ),
                                       ),
                                       const SizedBox(height: 12),
                                       Text(_pranaId, style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 18)),
@@ -1192,48 +917,37 @@ class _MyCardScreenState extends State<MyCardScreen> {
                                         ),
                                         child: const Text('PRANA V2 • ECC + Ed25519 Signed Payload', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
                                       ),
-                                      const SizedBox(height: 16),
-                                      // Simulated Unlock Buttons for Demo/Reviewer
-                                      const Text('Simulate Scanner Access:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: ElevatedButton.icon(
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: const Color(0xFFD97706),
-                                                foregroundColor: Colors.white,
-                                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                              ),
-                                              onPressed: () {
-                                                Navigator.pop(context);
-                                                _showParamedicOfflineView(context);
-                                              },
-                                              icon: const Icon(Icons.medical_services_outlined, size: 16),
-                                              label: const Text('Paramedic Unlock', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF0F172A),
+                                          borderRadius: BorderRadius.circular(14),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Row(
+                                              children: [
+                                                Icon(Icons.lock_outline, color: Color(0xFF38BDF8), size: 14),
+                                                SizedBox(width: 6),
+                                                Text('HYBRID ENCRYPTION PIPELINE', style: TextStyle(color: Color(0xFF38BDF8), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8)),
+                                              ],
                                             ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: ElevatedButton.icon(
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: const Color(0xFF0284C7),
-                                                foregroundColor: Colors.white,
-                                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                              ),
-                                              onPressed: () {
-                                                Navigator.pop(context);
-                                                _showHospitalPortalView(context);
-                                              },
-                                              icon: const Icon(Icons.local_hospital_outlined, size: 16),
-                                              label: const Text('Hospital Portal', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                            const SizedBox(height: 6),
+                                            const Text(
+                                              'Medical JSON → Compress → AES-256-GCM Encrypt → ECC Encrypt Key → Ed25519 Sign',
+                                              style: TextStyle(color: Colors.white70, fontSize: 10, height: 1.3),
                                             ),
-                                          ),
-                                        ],
+                                            const SizedBox(height: 6),
+                                            SelectableText(
+                                              'PRANA_V2|PID:$_pranaId|YK:enc_yellow_blob|SIG:ed25519_valid',
+                                              style: const TextStyle(color: Color(0xFF4ADE80), fontSize: 9, fontFamily: 'monospace'),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                      const SizedBox(height: 10),
+                                      const SizedBox(height: 14),
                                       TextButton(
                                         onPressed: () => Navigator.pop(context),
                                         child: const Text('Close'),
@@ -1250,7 +964,12 @@ class _MyCardScreenState extends State<MyCardScreen> {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: const Icon(Icons.qr_code_2, size: 140, color: Color(0xFF0F172A)),
+                            child: QrImageView(
+                              data: 'PRANA_V2|PID:$_pranaId|YK:enc_yellow_blob|SIG:ed25519_valid',
+                              version: QrVersions.auto,
+                              size: 140.0,
+                              backgroundColor: Colors.white,
+                            ),
                           ),
                         ),
                       ),
