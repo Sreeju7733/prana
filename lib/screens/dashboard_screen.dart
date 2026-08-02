@@ -186,7 +186,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const Divider(height: 28),
                   Expanded(
-                    child: snapshot.connectionState == ConnectionState.waiting
+                    child: (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData && _cachedEmergencyModalPayload == null)
                         ? const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)))
                         : ListView(
                             children: [
