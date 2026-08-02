@@ -213,7 +213,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     else if (allergies.isEmpty)
                                       const Text('No allergy records filed.', style: TextStyle(color: Color(0xFF64748B)))
                                     else
-                                      ...allergies.map((a) {
+                                      ...allergies.where((a) {
+                                        final rawName = (a['allergen'] ?? a['name'] ?? '').toString().trim();
+                                        return rawName.isNotEmpty && rawName.toLowerCase() != 'null' && rawName.toLowerCase() != 'undefined';
+                                      }).map((a) {
                                         final allergen = (a['allergen'] ?? a['name'] ?? 'Allergy').toString().toUpperCase();
                                         final severity = (a['severity'] ?? 'Severe').toString();
                                         final reaction = a['reaction_description'] ?? a['reaction'];
