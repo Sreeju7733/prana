@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
@@ -14,11 +15,17 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final ApiService _apiService = ApiService();
 
+  // Static in-memory caches preserved across tab switches
+  static Map<String, dynamic>? _cachedDashboardData;
+  static List<dynamic>? _cachedEmergencyModalPayload;
+
   Map<String, dynamic>? _dashboardData;
 
   @override
   void initState() {
     super.initState();
+    // Instant cache read - zero loading spinner on dashboard return
+    _dashboardData = _cachedDashboardData;
     _fetchDashboardData();
   }
 
@@ -26,9 +33,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final res = await _apiService.getDashboard();
       if (mounted) {
-        setState(() {
-          _dashboardData = res;
-        });
+        final newJson = jsonEncode(res);
+        final oldJson = jsonEncode(_cachedDashboardData);
+
+        // Update state and cache ONLY if data changed or cache was empty
+        if (_dashboardData == null || newJson != oldJson) {
+          _cachedDashboardData = res;
+          setState(() {
+            _dashboardData = res;
+          });
+        }
       }
     } catch (_) {}
   }
@@ -48,19 +62,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final clean = s.split('T').first;
       final parts = clean.split('-');
       if (parts.length == 3) {
-        final year = parts[0];
-        final monthInt = int.tryParse(parts[1]) ?? 1;
-        final day = int.tryParse(parts[2]) ?? 1;
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        final monthStr = months[(monthInt - 1).clamp(0, 11)];
-        return '$day $monthStr $year';
+        return '${parts[2]}/${parts[1]}/${parts[0]}';
       }
-    } catch (_) {}
-    return s;
+      return clean;
+    } catch (_) {
+      return s;
+    }
   }
 
   void _copyPranaId() {
-    final pranaId = _dashboardData?['profile']?['prana_id'] ?? "PRAN-2973CAC1";
+    final String pranaId = _dashboardData?['profile']?['prana_id'] ?? 'PRAN-2973CAC1';
     Clipboard.setData(ClipboardData(text: pranaId));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -77,6 +88,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) {
         return FutureBuilder<List<dynamic>>(
+          initialData: _cachedEmergencyModalPayload,
           future: Future.wait([
             _apiService.getAllergies().catchError((_) => []),
             _apiService.getMedications().catchError((_) => []),
@@ -86,7 +98,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _apiService.getSurgeries().catchError((_) => []),
             _apiService.getDevices().catchError((_) => []),
             _apiService.getVitals(latestOnly: true).catchError((_) => []),
-          ]),
+          ]).then((payload) {
+            final newJson = jsonEncode(payload);
+            final oldJson = jsonEncode(_cachedEmergencyModalPayload);
+            if (newJson != oldJson) {
+              _cachedEmergencyModalPayload = payload;
+            }
+            return payload;
+          }),
           builder: (context, snapshot) {
             final allergies = snapshot.data != null ? snapshot.data![0] as List : [];
             final medications = snapshot.data != null ? snapshot.data![1] as List : [];
