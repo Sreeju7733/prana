@@ -9,9 +9,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _alertScan = true;
-  bool _alertContacts = true;
-  bool _includeGps = true;
+
 
   void _showEmergencyDashboardModal() {
     showModalBottomSheet(
@@ -169,41 +167,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 28),
 
-            // Emergency Contacts Section
-            Text('EMERGENCY CONTACTS & FAMILY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Colors.grey.shade600)),
-            const SizedBox(height: 12),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.star, color: Colors.amber),
-                    title: const Text('Jane Doe (Wife) ★ Primary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    subtitle: const Text('Relay Hotline: 1800-PRANA-RELAY'),
-                    trailing: OutlinedButton(
-                      style: OutlinedButton.styleFrom(minimumSize: const Size(60, 30), padding: EdgeInsets.zero),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Test SMS sent to Jane Doe!')));
-                      },
-                      child: const Text('Test SMS', style: TextStyle(fontSize: 11)),
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.family_restroom_outlined, color: Color(0xFF0284C7)),
-                    title: const Text('Manage Dependents / Parents'),
-                    subtitle: const Text('PRAN-4491-1102 (Mother) • Synced 1 hr ago'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {},
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 28),
+
 
             // Data & Privacy
             Text('DATA & PRIVACY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Colors.grey.shade600)),
@@ -241,37 +205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 28),
 
-            // Notifications
-            Text('NOTIFICATIONS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Colors.grey.shade600)),
-            const SizedBox(height: 12),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                children: [
-                  SwitchListTile(
-                    title: const Text('Alert on Every Scan', style: TextStyle(fontSize: 14)),
-                    value: _alertScan,
-                    onChanged: (val) => setState(() => _alertScan = val),
-                  ),
-                  const Divider(height: 1),
-                  SwitchListTile(
-                    title: const Text('Alert Emergency Contacts', style: TextStyle(fontSize: 14)),
-                    value: _alertContacts,
-                    onChanged: (val) => setState(() => _alertContacts = val),
-                  ),
-                  const Divider(height: 1),
-                  SwitchListTile(
-                    title: const Text('Include GPS in Alerts', style: TextStyle(fontSize: 14)),
-                    value: _includeGps,
-                    onChanged: (val) => setState(() => _includeGps = val),
-                  ),
-                ],
-              ),
-            ),
+
             const SizedBox(height: 32),
             const Center(
               child: Text('PRANA Health App v1.0.0+1', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
