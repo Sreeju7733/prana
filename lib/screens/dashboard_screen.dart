@@ -723,7 +723,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final profile = _dashboardData?['profile'];
     final healthSummary = _dashboardData?['health_summary'];
-    final recentScans = (_dashboardData?['recent_scans'] as List?) ?? [];
 
     final String pranaId = profile?['prana_id'] ?? 'PRAN-2973CAC1';
     final String bloodGroup = profile?['blood_group'] ?? 'B+';
@@ -1007,8 +1006,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             Container(
                               padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFCCFBF1),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFCCFBF1),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(Icons.person, color: Color(0xFF0D9488), size: 20),
@@ -1096,6 +1095,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
     );
+  }
+
   void _showAddOrEditContactModal(BuildContext context, {Map<String, dynamic>? contact}) {
     final nameController = TextEditingController(text: contact?['name'] ?? '');
     final relController = TextEditingController(text: contact?['relationship'] ?? 'Family');

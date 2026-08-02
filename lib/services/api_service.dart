@@ -677,6 +677,8 @@ class ApiService {
     } else {
       return [];
     }
+  }
+
   Future<void> deleteEmergencyContact(String id) async {
     final token = await StorageService().getToken();
     final response = await http.delete(
