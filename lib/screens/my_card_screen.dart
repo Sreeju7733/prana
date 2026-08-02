@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/api_service.dart';
 
 class ScanHistoryItem {
   final String id;
@@ -105,16 +106,15 @@ class _MyCardScreenState extends State<MyCardScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
                 Navigator.pop(context);
                 setState(() => _cardActive = false);
                 try {
                   await _apiService.toggleCardStatus(true);
                 } catch (_) {}
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Card Suspended. Scans will display "Card Suspended."')),
-                  );
-                }
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('Card Suspended. Scans will display "Card Suspended."')),
+                );
               },
               child: const Text('Suspend', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
@@ -123,7 +123,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
       );
     } else {
       setState(() => _cardActive = true);
-      _apiService.toggleCardStatus(false).catchError((_) => {});
+      _apiService.toggleCardStatus(false).catchError((_) => <String, dynamic>{});
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Card reactivated & scannable.')),
       );
