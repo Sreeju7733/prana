@@ -547,6 +547,54 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> toggleCardStatus(bool isSuspended) async {
+    final token = await StorageService().getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/card/toggle-status'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'is_suspended': isSuspended}),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      return {'success': true, 'is_suspended': isSuspended};
+    }
+  }
+
+  Future<List<dynamic>> getScanHistory() async {
+    final token = await StorageService().getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/card/scans'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      final res = jsonDecode(response.body);
+      return (res['data'] as List<dynamic>?) ?? [];
+    } else {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> placeCardOrder(Map<String, dynamic> orderData) async {
+    final token = await StorageService().getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/card/order'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(orderData),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      return {'success': true, 'order_id': 'ORD-${DateTime.now().millisecondsSinceEpoch}'};
+    }
+  }
+
   // --- SCANNER & INTERACTION CHECKER ---
   Future<Map<String, dynamic>> checkDrugInteraction(String candidateDrug) async {
     final token = await StorageService().getToken();

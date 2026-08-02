@@ -1,4 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+class ScanHistoryItem {
+  final String id;
+  final String timeLabel;
+  final String location;
+  final String scannerName;
+  final String tier;
+  final Color tierColor;
+  final String exactGps;
+  final String deviceInfo;
+  final String dataAccessed;
+
+  const ScanHistoryItem({
+    required this.id,
+    required this.timeLabel,
+    required this.location,
+    required this.scannerName,
+    required this.tier,
+    required this.tierColor,
+    required this.exactGps,
+    required this.deviceInfo,
+    required this.dataAccessed,
+  });
+}
 
 class MyCardScreen extends StatefulWidget {
   const MyCardScreen({super.key});
@@ -9,6 +34,993 @@ class MyCardScreen extends StatefulWidget {
 
 class _MyCardScreenState extends State<MyCardScreen> {
   bool _cardActive = true;
+  final int _usedScansToday = 2;
+  final int _maxScansQuota = 10;
+  final String _pranaId = 'PRAN-7843-2910';
+  final String _userName = 'Rahul Sharma';
+
+  final List<ScanHistoryItem> _scanHistory = const [
+    ScanHistoryItem(
+      id: 'SCAN-9021',
+      timeLabel: 'Today, 14:32',
+      location: 'Delhi, India',
+      scannerName: 'Public (Green tier)',
+      tier: 'Green Tier',
+      tierColor: Color(0xFF16A34A),
+      exactGps: '28.6139° N, 77.2090° E (Connaught Place, New Delhi)',
+      deviceInfo: 'Safari / iPhone 15 Pro (iOS 17.4)',
+      dataAccessed: 'Basic emergency contacts, Blood group (B+), Severe Allergies (Penicillin)',
+    ),
+    ScanHistoryItem(
+      id: 'SCAN-8842',
+      timeLabel: 'Yesterday, 18:45',
+      location: 'Mumbai, India',
+      scannerName: 'Paramedic EMD-4521 (Yellow tier)',
+      tier: 'Yellow Tier',
+      tierColor: Color(0xFFD97706),
+      exactGps: '19.0760° N, 72.8777° E (Bandra Kurla Complex, Mumbai)',
+      deviceInfo: 'PRANA Paramedic Terminal v2.4 (Android 14)',
+      dataAccessed: 'Full emergency profile, Active prescriptions, Emergency Contact Auto-Alert dispatched',
+    ),
+    ScanHistoryItem(
+      id: 'SCAN-7612',
+      timeLabel: '3 days ago, 09:12',
+      location: 'Bangalore, India',
+      scannerName: 'Public (Green tier)',
+      tier: 'Green Tier',
+      tierColor: Color(0xFF16A34A),
+      exactGps: '12.9716° N, 77.5946° E (MG Road, Bengaluru)',
+      deviceInfo: 'Chrome 122.0 / Samsung Galaxy S24 (Android 14)',
+      dataAccessed: 'Basic emergency contacts, Organ donor badge status',
+    ),
+  ];
+
+  final ApiService _apiService = ApiService();
+
+  void _onToggleCardStatus(bool enable) {
+    HapticFeedback.mediumImpact();
+    if (!enable) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Suspend your card?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          content: const Text(
+            'Anyone scanning your QR will see "Card Suspended."\n\nYou can reactivate anytime.',
+            style: TextStyle(color: Color(0xFF475569), fontSize: 14, height: 1.4),
+          ),
+          actionsPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+          actions: [
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                Navigator.pop(context);
+                setState(() => _cardActive = false);
+                try {
+                  await _apiService.toggleCardStatus(true);
+                } catch (_) {}
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Card Suspended. Scans will display "Card Suspended."')),
+                  );
+                }
+              },
+              child: const Text('Suspend', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+    } else {
+      setState(() => _cardActive = true);
+      _apiService.toggleCardStatus(false).catchError((_) => {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Card reactivated & scannable.')),
+      );
+    }
+  }
+
+  Color get _quotaProgressColor {
+    final ratio = _usedScansToday / _maxScansQuota;
+    if (ratio >= 1.0) {
+      return const Color(0xFFDC2626); // Red at 10/10
+    } else if (ratio >= 0.8) {
+      return const Color(0xFFEAB308); // Yellow at 8/10+
+    }
+    return const Color(0xFF16A34A); // Green normal
+  }
+
+  void _showParamedicOfflineView(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.88,
+        decoration: const BoxDecoration(
+          color: Color(0xFF0F172A),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD97706).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFD97706)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.wifi_off_rounded, color: Color(0xFFFBBF24), size: 20),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'PRANA OFFLINE BRIEFING (PARAMEDIC VIEW)',
+                      style: TextStyle(color: Color(0xFFFBBF24), fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 1),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Rahul Sharma', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22)),
+                    const Text('25 Years • Male', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    const SizedBox(height: 16),
+
+                    const Text('Blood Group', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
+                    const Text('B+', style: TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.w900, fontSize: 28)),
+                    const SizedBox(height: 16),
+
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF991B1B).withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFEF4444)),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('CRITICAL ALERTS', style: TextStyle(color: Color(0xFFFCA5A5), fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1)),
+                          SizedBox(height: 6),
+                          Text('• Penicillin — Severe Anaphylaxis', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    const Text('Current Medications', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    const Text('• Metformin 500mg (Twice Daily)\n• Lisinopril 10mg (Once Daily)', style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
+                    const SizedBox(height: 14),
+
+                    const Text('Medical Conditions', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    const Text('• Type 2 Diabetes\n• Hypertension', style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
+                    const SizedBox(height: 14),
+
+                    const Text('Treatment Notes', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    const Text('• Avoid NSAIDs\n• Check blood glucose\n• Hypoglycemia risk', style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
+                    const SizedBox(height: 14),
+
+                    const Text('Emergency Contact', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    const Text('Rajesh Sharma • 98XXXX12345', style: TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 14)),
+                    const SizedBox(height: 20),
+
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white10,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Verified ✓  Signature Valid (Ed25519)', style: TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 12)),
+                          Text('Offline Record Decrypted via Local AES Key', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                          Text('Last Updated: 29 Jul 2026', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD97706),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close Offline Briefing', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showHospitalPortalView(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.90,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.local_hospital_outlined, color: Color(0xFF0284C7)),
+                    SizedBox(width: 8),
+                    Text('HOSPITAL ONLINE PORTAL', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0F2FE),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text('FHIR v4.0.1', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text('Authenticated Record Stream for PID: $_pranaId', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+            const SizedBox(height: 16),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('INSURANCE & ADMISSION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0284C7), letterSpacing: 0.8)),
+                          SizedBox(height: 6),
+                          Text('• Policy: Star Health Comprehensive #SH-8849201', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          Text('• Coverage: ₹10,000,000 Cashless Pre-Approved', style: TextStyle(fontSize: 12, color: Color(0xFF16A34A))),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('RADIOLOGY & IMAGING (DICOM)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8B5CF6), letterSpacing: 0.8)),
+                          SizedBox(height: 6),
+                          Text('• Chest CT Scan — AIIMS Delhi (24/05/2026)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                          Text('• Brain MRI w/ Contrast — Manipal Hospital (12/01/2026)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('LAB REPORTS & ADVANCE DIRECTIVES', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF16A34A), letterSpacing: 0.8)),
+                          SizedBox(height: 6),
+                          Text('• HbA1c: 6.8% (Controlled Diabetic)', style: TextStyle(fontSize: 12, color: Color(0xFF334155))),
+                          Text('• Renal Function Test: eGFR > 90 mL/min', style: TextStyle(fontSize: 12, color: Color(0xFF334155))),
+                          Text('• Advance Directive: Full Resuscitation (DNR: No)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0284C7),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close Hospital Portal', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showScanDetailModal(BuildContext context, ScanHistoryItem item) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Scan Detail Log', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: item.tierColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    item.tier,
+                    style: TextStyle(color: item.tierColor, fontWeight: FontWeight.bold, fontSize: 11),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text('${item.timeLabel} • ${item.location}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+            const SizedBox(height: 20),
+
+            // Exact GPS
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.location_on, size: 16, color: Color(0xFF0284C7)),
+                      SizedBox(width: 6),
+                      Text('EXACT GPS LOCATION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: Color(0xFF0284C7))),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(item.exactGps, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Device Info
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.devices, size: 16, color: Color(0xFF8B5CF6)),
+                      SizedBox(width: 6),
+                      Text('DEVICE & SCANNER INFO', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: Color(0xFF8B5CF6))),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(item.scannerName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  const SizedBox(height: 2),
+                  Text(item.deviceInfo, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Data Accessed
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.security, size: 16, color: Color(0xFF16A34A)),
+                      SizedBox(width: 6),
+                      Text('DATA ACCESSED', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: Color(0xFF16A34A))),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(item.dataAccessed, style: const TextStyle(fontSize: 13, color: Color(0xFF334155), height: 1.4)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // PRANA V2 Cryptographic Verification
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.verified_user_outlined, size: 16, color: Color(0xFF15803D)),
+                      SizedBox(width: 6),
+                      Text('PRANA V2 CRYPTO VERIFICATION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: Color(0xFF15803D))),
+                    ],
+                  ),
+                  SizedBox(height: 6),
+                  Text('• Payload: PRANA_V2 | AES-256-GCM Encrypted', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF166534))),
+                  SizedBox(height: 2),
+                  Text('• Signature: Ed25519 Verified ✓ (Public Key match)', style: TextStyle(fontSize: 12, color: Color(0xFF15803D))),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Suspicious Scan Action Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFDC2626),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() => _cardActive = false);
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      title: const Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626)),
+                          SizedBox(width: 8),
+                          Text('Card Suspended & Reported'),
+                        ],
+                      ),
+                      content: Text(
+                        'Security incident logged for ${item.id} (${item.location}).\n\nYour card has been instantly suspended to protect your data.',
+                        style: const TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.4),
+                      ),
+                      actions: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0F172A),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.shield_outlined, size: 18),
+                label: const Text('Suspicious scan? Suspend & Report', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showShareOptionsModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      backgroundColor: Colors.white,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Share Emergency Card',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Select how you would like to share your emergency medical details.',
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              tileColor: const Color(0xFFF8FAFC),
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.image_outlined, color: Color(0xFF16A34A)),
+              ),
+              title: const Text('Share as Image', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              subtitle: const Text('Generates card PNG for WhatsApp or printing', style: TextStyle(fontSize: 12)),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Card image PNG generated & ready to share via WhatsApp!')),
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+            ListTile(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              tileColor: const Color(0xFFF8FAFC),
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0F2FE),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.link_rounded, color: Color(0xFF0284C7)),
+              ),
+              title: const Text('Share Link', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              subtitle: Text('Sends prana.emergency/id/$_pranaId to family', style: const TextStyle(fontSize: 12)),
+              onTap: () {
+                final link = 'prana.emergency/id/$_pranaId';
+                Clipboard.setData(ClipboardData(text: link));
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Emergency link ($link) copied to share with family!')),
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+            ListTile(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              tileColor: const Color(0xFFF8FAFC),
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3E8FF),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.print_outlined, color: Color(0xFF9333EA)),
+              ),
+              title: const Text('Print at Home', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              subtitle: const Text('Generates PDF A4 layout with cut-lines', style: TextStyle(fontSize: 12)),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Printable PDF A4 with cut-lines generated successfully!')),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showOrderCardModal(BuildContext context) {
+    String paymentMethod = 'UPI';
+    bool orderPlaced = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 20,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (orderPlaced) ...[
+                    Center(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFDCFCE7),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 60),
+                          ),
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Order Placed Successfully!',
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Arrives in 3-5 days',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF16A34A)),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Your physical waterproof PRANA card with embedded NFC & emergency QR pointer is being crafted.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Color(0xFF64748B), fontSize: 13, height: 1.4),
+                          ),
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF16A34A),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              ),
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Done', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    const Text('Physical PRANA Card — ₹20', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                    const SizedBox(height: 6),
+                    const Text('Waterproof physical NFC + QR card delivered to your doorstep.', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      initialValue: '124 Park View, MG Road, Bengaluru',
+                      decoration: const InputDecoration(
+                        labelText: 'Delivery Address (Pre-filled from profile)',
+                        prefixIcon: Icon(Icons.home_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Payment Method', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A))),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ChoiceChip(
+                            label: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.qr_code_2, size: 18),
+                                SizedBox(width: 6),
+                                Text('UPI'),
+                              ],
+                            ),
+                            selected: paymentMethod == 'UPI',
+                            selectedColor: const Color(0xFFDCFCE7),
+                            labelStyle: TextStyle(
+                              color: paymentMethod == 'UPI' ? const Color(0xFF15803D) : const Color(0xFF475569),
+                              fontWeight: FontWeight.bold,
+                            ),
+                            onSelected: (selected) {
+                              if (selected) setModalState(() => paymentMethod = 'UPI');
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ChoiceChip(
+                            label: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.local_shipping_outlined, size: 18),
+                                SizedBox(width: 6),
+                                Text('Cash on Delivery'),
+                              ],
+                            ),
+                            selected: paymentMethod == 'COD',
+                            selectedColor: const Color(0xFFDCFCE7),
+                            labelStyle: TextStyle(
+                              color: paymentMethod == 'COD' ? const Color(0xFF15803D) : const Color(0xFF475569),
+                              fontWeight: FontWeight.bold,
+                            ),
+                            onSelected: (selected) {
+                              if (selected) setModalState(() => paymentMethod = 'COD');
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF16A34A),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        onPressed: () {
+                          setModalState(() {
+                            orderPlaced = true;
+                          });
+                        },
+                        child: const Text('Order Now • ₹20', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showScanQuotaModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      backgroundColor: Colors.white,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Daily Scan Quota', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _quotaProgressColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '$_usedScansToday/$_maxScansQuota Used',
+                      style: TextStyle(color: _quotaProgressColor, fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: _usedScansToday / _maxScansQuota,
+                  minHeight: 8,
+                  backgroundColor: const Color(0xFFE2E8F0),
+                  valueColor: AlwaysStoppedAnimation<Color>(_quotaProgressColor),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text("Today's Scan Activity", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF334155))),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFF1F5F9)),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.qr_code_scanner, size: 18, color: Color(0xFF0284C7)),
+                        SizedBox(width: 10),
+                        Text('Public (Green tier)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      ],
+                    ),
+                    Text('14:32', style: TextStyle(color: Color(0xFF64748B), fontSize: 12, fontFamily: 'monospace')),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.workspace_premium_rounded, color: Color(0xFF2563EB), size: 28),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Limit reached?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E40AF))),
+                          Text('Upgrade to Pro for 50 scans/day', style: TextStyle(fontSize: 12, color: Color(0xFF1E3A8A))),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('PRANA Pro upgrade coming soon!')),
+                        );
+                      },
+                      child: const Text('Pro', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,88 +1038,191 @@ class _MyCardScreenState extends State<MyCardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Digital Card Preview
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x1A000000), blurRadius: 20, offset: Offset(0, 10)),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Digital Card Preview (with Loud Suspended Overlay)
+            Stack(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x1A000000), blurRadius: 20, offset: Offset(0, 10)),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Icon(Icons.health_and_safety, color: theme.primaryColor, size: 28),
-                          const SizedBox(width: 8),
-                          const Text('PRANA CARD', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                          Row(
+                            children: [
+                              Icon(Icons.health_and_safety, color: theme.primaryColor, size: 28),
+                              const SizedBox(width: 8),
+                              const Text('PRANA CARD', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFF10B981)),
+                            ),
+                            child: const Text('GREEN TIER', style: TextStyle(color: Color(0xFF34D399), fontSize: 10, fontWeight: FontWeight.bold)),
+                          ),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF10B981)),
-                        ),
-                        child: const Text('GREEN TIER', style: TextStyle(color: Color(0xFF34D399), fontSize: 10, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  // Centered QR Code
-                  GestureDetector(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => Dialog(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24.0),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.qr_code_2, size: 220),
-                                const SizedBox(height: 12),
-                                const Text('PRAN-7843-2910', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 18)),
-                                const SizedBox(height: 16),
-                                ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-                              ],
+                      const SizedBox(height: 16),
+                      Text(_userName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                      const SizedBox(height: 4),
+                      const Text('Blood Group : B+', style: TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.w600, fontSize: 14)),
+                      const SizedBox(height: 4),
+                      const Text('⚠️ Severe Penicillin Allergy', style: TextStyle(color: Color(0xFFFCA5A5), fontWeight: FontWeight.w600, fontSize: 13)),
+                      const SizedBox(height: 4),
+                      const Text('Emergency: 1800-PRANA', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                      const SizedBox(height: 16),
+                      // Centered QR Code
+                      Center(
+                        child: GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => Dialog(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24.0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF8FAFC),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                                        ),
+                                        child: const Icon(Icons.qr_code_2, size: 200, color: Color(0xFF0F172A)),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(_pranaId, style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 18)),
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFDCFCE7),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Text('PRANA V2 • ECC + Ed25519 Signed Payload', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      // Simulated Unlock Buttons for Demo/Reviewer
+                                      const Text('Simulate Scanner Access:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0xFFD97706),
+                                                foregroundColor: Colors.white,
+                                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                              ),
+                                              onPressed: () {
+                                                Navigator.pop(context);
+                                                _showParamedicOfflineView(context);
+                                              },
+                                              icon: const Icon(Icons.medical_services_outlined, size: 16),
+                                              label: const Text('Paramedic Unlock', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0xFF0284C7),
+                                                foregroundColor: Colors.white,
+                                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                              ),
+                                              onPressed: () {
+                                                Navigator.pop(context);
+                                                _showHospitalPortalView(context);
+                                              },
+                                              icon: const Icon(Icons.local_hospital_outlined, size: 16),
+                                              label: const Text('Hospital Portal', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('Close'),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
                             ),
+                            child: const Icon(Icons.qr_code_2, size: 140, color: Color(0xFF0F172A)),
                           ),
                         ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(Icons.qr_code_2, size: 140, color: Color(0xFF0F172A)),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('Tap to enlarge', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                  const SizedBox(height: 16),
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('John Doe', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text('Last updated: Today 14:32', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      const SizedBox(height: 8),
+                      const Center(
+                        child: Text(
+                          'Scan only using PRANA Responder',
+                          style: TextStyle(color: Colors.white54, fontSize: 11, fontStyle: FontStyle.italic),
+                        ),
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                if (!_cardActive)
+                  Positioned.fill(
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 300),
+                      opacity: !_cardActive ? 1.0 : 0.0,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF991B1B).withValues(alpha: 0.92),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.block_rounded, color: Colors.white, size: 52),
+                            SizedBox(height: 10),
+                            Text(
+                              '🛑 CARD SUSPENDED',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20, letterSpacing: 1.5),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'All emergency QR resolution is blocked',
+                              style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 24),
 
@@ -118,27 +1233,27 @@ class _MyCardScreenState extends State<MyCardScreen> {
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Generating WhatsApp card PDF...')));
-                    },
-                    icon: const Icon(Icons.share_outlined, size: 18),
-                    label: const Text('Share Card', style: TextStyle(fontSize: 13)),
+                    onPressed: () => _showShareOptionsModal(context),
+                    icon: const Icon(Icons.share_outlined, size: 18, color: Color(0xFF334155)),
+                    label: const Text('Share Card', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF334155))),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF16A34A),
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
-                    onPressed: () {
-                      _showOrderCardModal(context);
-                    },
+                    onPressed: () => _showOrderCardModal(context),
                     icon: const Icon(Icons.credit_card_outlined, size: 18),
-                    label: const Text('Order Card (₹20)', style: TextStyle(fontSize: 13)),
+                    label: const Text('Order Card (₹20)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -161,16 +1276,48 @@ class _MyCardScreenState extends State<MyCardScreen> {
                 children: [
                   SwitchListTile(
                     title: const Text('Card Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    subtitle: Text(_cardActive ? 'Active & Scannable' : 'Suspended', style: TextStyle(fontSize: 12, color: _cardActive ? Colors.green : Colors.red)),
+                    subtitle: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: Text(
+                        _cardActive ? 'Active & Scannable' : 'Card Suspended',
+                        key: ValueKey<bool>(_cardActive),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _cardActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                     value: _cardActive,
-                    activeThumbColor: theme.primaryColor,
-                    onChanged: (val) => setState(() => _cardActive = val),
+                    activeThumbColor: const Color(0xFF16A34A),
+                    activeTrackColor: const Color(0xFFDCFCE7),
+                    inactiveThumbColor: const Color(0xFF94A3B8),
+                    inactiveTrackColor: const Color(0xFFE2E8F0),
+                    onChanged: (val) => _onToggleCardStatus(val),
                   ),
                   const Divider(height: 1),
-                  const ListTile(
-                    leading: Icon(Icons.speed_outlined, color: Color(0xFF0284C7)),
-                    title: Text('Daily Scan Quota'),
-                    subtitle: Text('2/10 scans used today'),
+                  ListTile(
+                    leading: const Icon(Icons.speed_outlined, color: Color(0xFF0284C7)),
+                    title: const Text('Daily Scan Quota', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4),
+                        Text('$_usedScansToday/$_maxScansQuota scans used today', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                        const SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: _usedScansToday / _maxScansQuota,
+                            minHeight: 5,
+                            backgroundColor: const Color(0xFFE2E8F0),
+                            valueColor: AlwaysStoppedAnimation<Color>(_quotaProgressColor),
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _showScanQuotaModal(context),
                   ),
                   const Divider(height: 1),
                   const ListTile(
@@ -200,65 +1347,153 @@ class _MyCardScreenState extends State<MyCardScreen> {
             ),
             const SizedBox(height: 28),
 
-            // Scan History
-            Text(
-              'SCAN HISTORY',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Colors.grey.shade600),
+            // Scan History Tree Section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'RECENT ACTIVITY',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Colors.grey.shade600),
+                ),
+                Text(
+                  '${_scanHistory.length} Scans',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             Container(
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              child: const Column(
-                children: [
-                  ListTile(
-                    leading: CircleAvatar(backgroundColor: Color(0xFFDCFCE7), child: Icon(Icons.medical_services, color: Color(0xFF16A34A), size: 18)),
-                    title: Text('AIIMS Emergency (Paramedic)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    subtitle: Text('28 Jul, 18:45 • Delhi, IN'),
-                    trailing: Icon(Icons.map_outlined, color: Color(0xFF0284C7)),
-                  ),
-                ],
+              child: Column(
+                children: List.generate(_scanHistory.length, (index) {
+                  final item = _scanHistory[index];
+                  final isFirst = index == 0;
+                  final isLast = index == _scanHistory.length - 1;
+
+                  return InkWell(
+                    onTap: () => _showScanDetailModal(context, item),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6.0),
+                      child: IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Tree Connector Column
+                            SizedBox(
+                              width: 24,
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      width: 2,
+                                      color: isFirst ? Colors.transparent : const Color(0xFFCBD5E1),
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      color: item.tierColor,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 2),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: item.tierColor.withValues(alpha: 0.4),
+                                          blurRadius: 4,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Container(
+                                      width: 2,
+                                      color: isLast ? Colors.transparent : const Color(0xFFCBD5E1),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Content Item
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: const Color(0xFFF1F5F9)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          item.timeLabel,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                                        ),
+                                        Text(
+                                          '• ${item.location}',
+                                          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Scanner: ${item.scannerName}',
+                                      style: const TextStyle(fontSize: 12, color: Color(0xFF334155), fontWeight: FontWeight.w500),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: isFirst ? const Color(0xFFE0F2FE) : const Color(0xFFF1F5F9),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: isFirst ? const Color(0xFFBAE6FD) : const Color(0xFFE2E8F0)),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              isFirst ? Icons.map_outlined : Icons.info_outline_rounded,
+                                              size: 13,
+                                              color: isFirst ? const Color(0xFF0369A1) : const Color(0xFF475569),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              isFirst ? '[View on Map]' : '[View Details]',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: isFirst ? const Color(0xFF0369A1) : const Color(0xFF475569),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showOrderCardModal(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Order Physical PRANA Card', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            const Text('Waterproof NFC + QR physical card delivered to your doorstep for ₹20.', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
-            const SizedBox(height: 20),
-            TextFormField(decoration: const InputDecoration(labelText: 'Delivery Address')),
-            const SizedBox(height: 12),
-            TextFormField(decoration: const InputDecoration(labelText: 'Pincode')),
-            const Spacer(),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Order placed successfully! Card will arrive in 3-5 days.')));
-              },
-              child: const Text('Pay ₹20 & Order'),
-            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),

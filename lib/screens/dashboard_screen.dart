@@ -106,90 +106,89 @@ class _DashboardScreenState extends State<DashboardScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return FutureBuilder<List<dynamic>>(
-          initialData: _cachedEmergencyModalPayload,
-          future: (!HealthCacheManager.isDirty && _cachedEmergencyModalPayload != null)
-              ? Future.value(_cachedEmergencyModalPayload!)
-              : Future.wait([
-                  _apiService.getAllergies().catchError((_) => []),
-                  _apiService.getMedications().catchError((_) => []),
-                  _apiService.getEmergencyContacts().catchError((_) => []),
-                  _apiService.getProfile().catchError((_) => <String, dynamic>{}),
-                  _apiService.getConditions().catchError((_) => []),
-                  _apiService.getSurgeries().catchError((_) => []),
-                  _apiService.getDevices().catchError((_) => []),
-                  _apiService.getVitals(latestOnly: true).catchError((_) => []),
-                ]).then((payload) {
-                  _cachedEmergencyModalPayload = payload;
-                  return payload;
-                }),
-          builder: (context, snapshot) {
-            final allergies = snapshot.data != null ? snapshot.data![0] as List : [];
-            final medications = snapshot.data != null ? snapshot.data![1] as List : [];
-            final contacts = snapshot.data != null ? snapshot.data![2] as List : [];
-            final fullProfile = snapshot.data != null && snapshot.data!.length > 3 && snapshot.data![3] is Map
-                ? (snapshot.data![3]['data'] ?? snapshot.data![3])
-                : null;
-            final conditions = snapshot.data != null && snapshot.data!.length > 4 ? snapshot.data![4] as List : [];
-            final surgeries = snapshot.data != null && snapshot.data!.length > 5 ? snapshot.data![5] as List : [];
-            final devices = snapshot.data != null && snapshot.data!.length > 6 ? snapshot.data![6] as List : [];
-            final vitals = snapshot.data != null && snapshot.data!.length > 7 ? snapshot.data![7] as List : [];
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return FutureBuilder<List<dynamic>>(
+              initialData: _cachedEmergencyModalPayload,
+              future: (!HealthCacheManager.isDirty && _cachedEmergencyModalPayload != null)
+                  ? Future.value(_cachedEmergencyModalPayload!)
+                  : Future.wait([
+                      _apiService.getAllergies().catchError((_) => []),
+                      _apiService.getMedications().catchError((_) => []),
+                      _apiService.getEmergencyContacts().catchError((_) => []),
+                      _apiService.getProfile().catchError((_) => <String, dynamic>{}),
+                      _apiService.getConditions().catchError((_) => []),
+                      _apiService.getSurgeries().catchError((_) => []),
+                      _apiService.getDevices().catchError((_) => []),
+                      _apiService.getVitals(latestOnly: true).catchError((_) => []),
+                    ]).then((payload) {
+                      _cachedEmergencyModalPayload = payload;
+                      return payload;
+                    }),
+              builder: (context, snapshot) {
+                final allergies = snapshot.data != null ? snapshot.data![0] as List : [];
+                final medications = snapshot.data != null ? snapshot.data![1] as List : [];
+                final contacts = snapshot.data != null ? snapshot.data![2] as List : [];
+                final fullProfile = snapshot.data != null && snapshot.data!.length > 3 && snapshot.data![3] is Map
+                    ? (snapshot.data![3]['data'] ?? snapshot.data![3])
+                    : null;
+                final conditions = snapshot.data != null && snapshot.data!.length > 4 ? snapshot.data![4] as List : [];
+                final surgeries = snapshot.data != null && snapshot.data!.length > 5 ? snapshot.data![5] as List : [];
+                final devices = snapshot.data != null && snapshot.data!.length > 6 ? snapshot.data![6] as List : [];
+                final vitals = snapshot.data != null && snapshot.data!.length > 7 ? snapshot.data![7] as List : [];
 
-            final profile = (fullProfile is Map ? fullProfile : _dashboardData?['profile']) as Map?;
-            final String name = profile?['full_name'] ?? 'User';
-            final String bloodGroup = profile?['blood_group'] ?? 'B+';
-            final String pranaId = profile?['prana_id'] ?? 'PRAN-2973CAC1';
-            final String rawDob = (profile?['date_of_birth'] ?? profile?['dob'] ?? profile?['dateOfBirth'] ?? '').toString();
-            final String dob = _formatDob(rawDob);
-            final bool noKnownAllergies = profile?['no_known_allergies'] == true || (allergies.isEmpty && profile?['allergies_recorded'] == true);
+                final profile = (fullProfile is Map ? fullProfile : _dashboardData?['profile']) as Map?;
+                final String name = (profile?['full_name'] ?? 'User').toString().toUpperCase();
+                final String bloodGroup = profile?['blood_group'] ?? 'B+';
+                final String pranaId = profile?['prana_id'] ?? 'PRAN-2973CAC1';
+                final String rawDob = (profile?['date_of_birth'] ?? profile?['dob'] ?? profile?['dateOfBirth'] ?? '').toString();
+                final String dob = _formatDob(rawDob);
+                final bool noKnownAllergies = profile?['no_known_allergies'] == true || (allergies.isEmpty && profile?['allergies_recorded'] == true);
 
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.88,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+                return Container(
+                  height: MediaQuery.of(context).size.height * 0.88,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                   ),
-                  const SizedBox(height: 16),
-                  Row(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          shape: BoxShape.circle,
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
-                        child: const Icon(Icons.medical_services_outlined, color: Colors.red, size: 24),
                       ),
-                      const SizedBox(width: 12),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 14),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Paramedic Emergency View', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          Text('What first responders see on QR scan', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                          const Text('PRANA EMERGENCY BRIEFING', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A), letterSpacing: 0.5)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFF59E0B)),
+                            ),
+                            child: const Text('PARAMEDIC FULL BRIEFING', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFFB45309))),
+                          ),
                         ],
                       ),
-                    ],
-                  ),
-                  const Divider(height: 28),
-                  Expanded(
-                    child: (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData && _cachedEmergencyModalPayload == null)
-                        ? const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)))
-                        : ListView(
-                            children: [
+                      const SizedBox(height: 16),
+
+                      Expanded(
+                        child: (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData && _cachedEmergencyModalPayload == null)
+                            ? const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)))
+                            : ListView(
+                                children: [
                               // 1. Patient Identifier Card
                               Container(
                                 padding: const EdgeInsets.all(16),
@@ -500,22 +499,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           child: Text('$cName ($cRel) • $cPhone', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0C4A6E))),
                                         );
                                       }),
-                                    const SizedBox(height: 4),
-                                    const Text('Relay Hotline: 1800-PRANA-RELAY (Option 1)', style: TextStyle(color: Color(0xFF0C4A6E), fontSize: 12)),
                                   ],
                                 ),
                               ),
                             ],
                           ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      );
+    },
+  );
+}
 
   Widget _buildEmergencySummaryCard(Map<String, dynamic>? data, String bloodGroup, String topAllergy, int medsCount, int conditionsCount) {
     final profile = data?['profile'];
