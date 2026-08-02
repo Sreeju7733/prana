@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'prescription_scanner_screen.dart';
@@ -21,6 +22,14 @@ class _HealthHubScreenState extends State<HealthHubScreen>
   final TextEditingController _searchController = TextEditingController();
   final ApiService _apiService = ApiService();
 
+  // Static in-memory caches preserved across tab switches
+  static List<dynamic>? _cachedMedications;
+  static List<dynamic>? _cachedAllergies;
+  static List<dynamic>? _cachedConditions;
+  static List<dynamic>? _cachedSurgeries;
+  static List<dynamic>? _cachedDevices;
+  static List<dynamic>? _cachedVitals;
+
   bool _isLoading = true;
   List<dynamic> _medications = [];
   List<dynamic> _allergies = [];
@@ -43,6 +52,18 @@ class _HealthHubScreenState extends State<HealthHubScreen>
     if (widget.initialSubTabIndex == 3) {
       _activeMoreSubView = 'vitals';
     }
+
+    // Instant cache read - zero loading spinner on Health Hub visits
+    if (_cachedMedications != null) {
+      _medications = _cachedMedications!;
+      _allergies = _cachedAllergies ?? [];
+      _conditions = _cachedConditions ?? [];
+      _surgeries = _cachedSurgeries ?? [];
+      _devices = _cachedDevices ?? [];
+      _vitals = _cachedVitals ?? [];
+      _isLoading = false;
+    }
+
     _loadHubData();
 
     if (widget.autoOpenAdd) {
@@ -52,8 +73,10 @@ class _HealthHubScreenState extends State<HealthHubScreen>
     }
   }
 
-  Future<void> _loadHubData() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadHubData({bool forceSpinner = false}) async {
+    if (_cachedMedications == null || forceSpinner) {
+      setState(() => _isLoading = true);
+    }
     try {
       final results = await Future.wait([
         _apiService.getMedications().catchError((_) => []),
@@ -65,15 +88,37 @@ class _HealthHubScreenState extends State<HealthHubScreen>
       ]);
 
       if (mounted) {
-        setState(() {
-          _medications = results[0];
-          _allergies = results[1];
-          _conditions = results[2];
-          _surgeries = results[3];
-          _devices = results[4];
-          _vitals = results[5];
-          _isLoading = false;
-        });
+        final newJson = jsonEncode(results);
+        final oldJson = jsonEncode([
+          _cachedMedications,
+          _cachedAllergies,
+          _cachedConditions,
+          _cachedSurgeries,
+          _cachedDevices,
+          _cachedVitals,
+        ]);
+
+        // Update state and cache ONLY if data changed or initial cache load
+        if (_cachedMedications == null || forceSpinner || newJson != oldJson) {
+          _cachedMedications = results[0];
+          _cachedAllergies = results[1];
+          _cachedConditions = results[2];
+          _cachedSurgeries = results[3];
+          _cachedDevices = results[4];
+          _cachedVitals = results[5];
+
+          setState(() {
+            _medications = results[0];
+            _allergies = results[1];
+            _conditions = results[2];
+            _surgeries = results[3];
+            _devices = results[4];
+            _vitals = results[5];
+            _isLoading = false;
+          });
+        } else if (_isLoading) {
+          setState(() => _isLoading = false);
+        }
       }
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
