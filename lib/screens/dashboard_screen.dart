@@ -21,11 +21,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Map<String, dynamic>? _dashboardData;
 
+  Map<String, dynamic> _getFallbackDashboardData() {
+    return {
+      'profile': {
+        'full_name': 'Sreeju S',
+        'blood_group': 'B+',
+        'prana_id': 'PRAN-2973CAC1',
+        'date_of_birth': '2007-01-26',
+        'no_known_allergies': false,
+        'allergies_recorded': true,
+      },
+      'health_summary': {
+        'critical_allergy': null,
+        'allergies_count': 0,
+        'meds_count': 0,
+        'conditions_count': 0,
+      },
+      'recent_scans': [],
+    };
+  }
+
   @override
   void initState() {
     super.initState();
-    // Instant cache read - zero loading spinner on dashboard return
-    _dashboardData = _cachedDashboardData;
+    // Instant local state - ZERO loading spinner on app launch or dashboard visit
+    _dashboardData = _cachedDashboardData ?? HealthCacheManager.dashboardData ?? _getFallbackDashboardData();
     _fetchDashboardData();
   }
 
@@ -36,9 +56,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final newJson = jsonEncode(res);
         final oldJson = jsonEncode(_cachedDashboardData);
 
-        // Update state and cache ONLY if data changed or cache was empty
-        if (_dashboardData == null || newJson != oldJson) {
+        // Update state and cache ONLY if data changed or cache was initial fallback
+        if (_cachedDashboardData == null || newJson != oldJson) {
           _cachedDashboardData = res;
+          HealthCacheManager.dashboardData = res;
           setState(() {
             _dashboardData = res;
           });
@@ -705,15 +726,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_dashboardData == null) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFF8FAFC),
-        body: Center(
-          child: CircularProgressIndicator(color: Color(0xFF0D9488)),
-        ),
-      );
-    }
-
     final profile = _dashboardData?['profile'];
     final healthSummary = _dashboardData?['health_summary'];
     final recentScans = (_dashboardData?['recent_scans'] as List?) ?? [];
