@@ -74,6 +74,13 @@ class _HealthHubScreenState extends State<HealthHubScreen>
   }
 
   Future<void> _loadHubData({bool forceSpinner = false}) async {
+    // ZERO API CALLS when cache is clean
+    if (!forceSpinner && !HealthCacheManager.isDirty && _cachedMedications != null) {
+      if (_isLoading && mounted) {
+        setState(() => _isLoading = false);
+      }
+      return;
+    }
     if (_cachedMedications == null || forceSpinner) {
       setState(() => _isLoading = true);
     }

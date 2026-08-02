@@ -49,21 +49,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _fetchDashboardData();
   }
 
-  Future<void> _fetchDashboardData() async {
+  Future<void> _fetchDashboardData({bool force = false}) async {
+    // ZERO API CALLS when cache is clean
+    if (!force && !HealthCacheManager.isDirty && HealthCacheManager.dashboardData != null) {
+      return;
+    }
     try {
-      final res = await _apiService.getDashboard();
+      final res = await _apiService.getDashboard(forceRefresh: force);
       if (mounted) {
-        final newJson = jsonEncode(res);
-        final oldJson = jsonEncode(_cachedDashboardData);
-
-        // Update state and cache ONLY if data changed or cache was initial fallback
-        if (_cachedDashboardData == null || newJson != oldJson) {
-          _cachedDashboardData = res;
-          HealthCacheManager.dashboardData = res;
-          setState(() {
-            _dashboardData = res;
-          });
-        }
+        _cachedDashboardData = res;
+        HealthCacheManager.dashboardData = res;
+        HealthCacheManager.isDirty = false;
+        setState(() {
+          _dashboardData = res;
+        });
       }
     } catch (_) {}
   }
@@ -110,23 +109,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (context) {
         return FutureBuilder<List<dynamic>>(
           initialData: _cachedEmergencyModalPayload,
-          future: Future.wait([
-            _apiService.getAllergies().catchError((_) => []),
-            _apiService.getMedications().catchError((_) => []),
-            _apiService.getEmergencyContacts().catchError((_) => []),
-            _apiService.getProfile().catchError((_) => <String, dynamic>{}),
-            _apiService.getConditions().catchError((_) => []),
-            _apiService.getSurgeries().catchError((_) => []),
-            _apiService.getDevices().catchError((_) => []),
-            _apiService.getVitals(latestOnly: true).catchError((_) => []),
-          ]).then((payload) {
-            final newJson = jsonEncode(payload);
-            final oldJson = jsonEncode(_cachedEmergencyModalPayload);
-            if (newJson != oldJson) {
-              _cachedEmergencyModalPayload = payload;
-            }
-            return payload;
-          }),
+          future: (!HealthCacheManager.isDirty && _cachedEmergencyModalPayload != null)
+              ? Future.value(_cachedEmergencyModalPayload!)
+              : Future.wait([
+                  _apiService.getAllergies().catchError((_) => []),
+                  _apiService.getMedications().catchError((_) => []),
+                  _apiService.getEmergencyContacts().catchError((_) => []),
+                  _apiService.getProfile().catchError((_) => <String, dynamic>{}),
+                  _apiService.getConditions().catchError((_) => []),
+                  _apiService.getSurgeries().catchError((_) => []),
+                  _apiService.getDevices().catchError((_) => []),
+                  _apiService.getVitals(latestOnly: true).catchError((_) => []),
+                ]).then((payload) {
+                  _cachedEmergencyModalPayload = payload;
+                  return payload;
+                }),
           builder: (context, snapshot) {
             final allergies = snapshot.data != null ? snapshot.data![0] as List : [];
             final medications = snapshot.data != null ? snapshot.data![1] as List : [];
