@@ -104,12 +104,26 @@ class _MyCardScreenState extends State<MyCardScreen> {
           }
 
           if (profile != null) {
-            _userName = (profile['full_name'] ?? 'Sreeju S').toString().trim();
-            _pranaId = (profile['prana_id'] ?? 'PRAN-2973CAC1').toString().trim();
-            _bloodGroup = (profile['blood_group'] ?? 'B+').toString().trim();
-            _userGender = (profile['gender'] ?? 'Male').toString();
+            final rawName = profile['full_name']?.toString().trim();
+            if (rawName != null && rawName.isNotEmpty && rawName != 'null') {
+              _userName = rawName;
+            }
+            final rawId = profile['prana_id']?.toString().trim();
+            if (rawId != null && rawId.isNotEmpty && rawId != 'null') {
+              _pranaId = rawId;
+            }
+            final rawBg = profile['blood_group']?.toString().trim();
+            if (rawBg != null && rawBg.isNotEmpty && rawBg != 'null' && rawBg != 'undefined') {
+              _bloodGroup = rawBg;
+            } else {
+              _bloodGroup = 'B+';
+            }
+            final rawGender = profile['gender']?.toString().trim();
+            if (rawGender != null && rawGender.isNotEmpty && rawGender != 'null') {
+              _userGender = rawGender;
+            }
 
-            if (profile['date_of_birth'] != null) {
+            if (profile['date_of_birth'] != null && profile['date_of_birth'].toString().isNotEmpty) {
               try {
                 final dobYear = DateTime.parse(profile['date_of_birth'].toString()).year;
                 _userAge = DateTime.now().year - dobYear;
