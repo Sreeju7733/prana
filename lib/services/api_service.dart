@@ -493,7 +493,10 @@ class ApiService {
   }
 
   // --- DASHBOARD HYDRATION ---
-  Future<Map<String, dynamic>> getDashboard() async {
+  Future<Map<String, dynamic>> getDashboard({bool forceRefresh = false}) async {
+    if (!forceRefresh && !HealthCacheManager.isDirty && HealthCacheManager.dashboardData != null) {
+      return HealthCacheManager.dashboardData!;
+    }
     final token = await StorageService().getToken();
     final response = await http.get(
       Uri.parse('$baseUrl/api/dashboard'),
@@ -501,7 +504,9 @@ class ApiService {
     );
     if (response.statusCode == 200) {
       final res = jsonDecode(response.body);
-      return res['data'] ?? {};
+      final data = (res['data'] ?? {}) as Map<String, dynamic>;
+      HealthCacheManager.dashboardData = data;
+      return data;
     } else {
       throw Exception('Failed to hydrate dashboard');
     }
