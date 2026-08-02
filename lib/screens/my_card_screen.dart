@@ -1087,50 +1087,11 @@ class _MyCardScreenState extends State<MyCardScreen> {
                   ),
                   const Divider(height: 1),
                   ListTile(
-                    leading: const Icon(Icons.speed_outlined, color: Color(0xFF0284C7)),
-                    title: const Text('Daily Scan Quota', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 4),
-                        Text('$_usedScansToday/$_maxScansQuota scans used today', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                        const SizedBox(height: 6),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: _usedScansToday / _maxScansQuota,
-                            minHeight: 5,
-                            backgroundColor: const Color(0xFFE2E8F0),
-                            valueColor: AlwaysStoppedAnimation<Color>(_quotaProgressColor),
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _showScanQuotaModal(context),
-                  ),
-                  const Divider(height: 1),
-                  const ListTile(
-                    leading: Icon(Icons.location_on_outlined, color: Color(0xFF8B5CF6)),
-                    title: Text('Geo-Restrictions'),
-                    subtitle: Text('India Only (Tap to change)'),
-                    trailing: Icon(Icons.chevron_right),
-                  ),
-                  const Divider(height: 1),
-                  const ListTile(
-                    leading: Icon(Icons.access_time_outlined, color: Color(0xFFEC4899)),
-                    title: Text('Active Hours'),
-                    subtitle: Text('24/7 Enabled'),
-                    trailing: Icon(Icons.chevron_right),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.report_problem_outlined, color: Colors.red),
-                    title: const Text('Report Lost / Stolen', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Requires biometric verification'),
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please authenticate biometrics to report lost card.')));
-                    },
+                    leading: const Icon(Icons.report_problem_outlined, color: Colors.red, size: 22),
+                    title: const Text('Report Card Lost or Stolen', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: const Text('Instantly freeze card & revoke responder access', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.red),
+                    onTap: () => _showReportLostStolenModal(context),
                   ),
                 ],
               ),
