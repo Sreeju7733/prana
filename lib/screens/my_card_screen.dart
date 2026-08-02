@@ -91,7 +91,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
 
   Future<void> _hydrateUserProfile() async {
     try {
-      final dashboard = await _apiService.getDashboard();
+      final dashboard = await _apiService.getDashboard(forceRefresh: true);
       final profile = dashboard['profile'] as Map<String, dynamic>?;
       final allergies = await _apiService.getAllergies().catchError((_) => []);
       final contacts = await _apiService.getEmergencyContacts().catchError((_) => []);
