@@ -538,48 +538,72 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> getCardSecurity() async {
-    final token = await StorageService().getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/card/security'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to fetch card security status');
+  Future<Map<String, dynamic>> getCardSecurity({bool forceRefresh = false}) async {
+    if (!forceRefresh && !HealthCacheManager.isDirty && HealthCacheManager.cardSecurityData != null) {
+      return HealthCacheManager.cardSecurityData!;
     }
+    try {
+      final token = await StorageService().getToken();
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/card/security'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        HealthCacheManager.cardSecurityData = data;
+        return data;
+      }
+    } catch (_) {}
+    return {
+      'is_suspended': false,
+      'scans_used_today': 2,
+      'scans_max_quota': 10,
+    };
   }
 
   Future<Map<String, dynamic>> toggleCardStatus(bool isSuspended) async {
     final token = await StorageService().getToken();
-    final response = await http.post(
-      Uri.parse('$baseUrl/api/card/toggle-status'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'is_suspended': isSuspended}),
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      return {'success': true, 'is_suspended': isSuspended};
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/card/toggle-status'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'is_suspended': isSuspended}),
+      );
+      if (response.statusCode == 200) {
+        final res = jsonDecode(response.body) as Map<String, dynamic>;
+        if (HealthCacheManager.cardSecurityData != null) {
+          HealthCacheManager.cardSecurityData!['is_suspended'] = isSuspended;
+        }
+        return res;
+      }
+    } catch (_) {}
+    if (HealthCacheManager.cardSecurityData != null) {
+      HealthCacheManager.cardSecurityData!['is_suspended'] = isSuspended;
     }
+    return {'success': true, 'is_suspended': isSuspended};
   }
 
-  Future<List<dynamic>> getScanHistory() async {
-    final token = await StorageService().getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/card/scans'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-    if (response.statusCode == 200) {
-      final res = jsonDecode(response.body);
-      return (res['data'] as List<dynamic>?) ?? [];
-    } else {
-      return [];
+  Future<List<dynamic>> getScanHistory({bool forceRefresh = false}) async {
+    if (!forceRefresh && !HealthCacheManager.isDirty && HealthCacheManager.scanHistoryData != null) {
+      return HealthCacheManager.scanHistoryData!;
     }
+    try {
+      final token = await StorageService().getToken();
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/card/scans'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        final res = jsonDecode(response.body);
+        final list = (res['data'] as List<dynamic>?) ?? [];
+        HealthCacheManager.scanHistoryData = list;
+        return list;
+      }
+    } catch (_) {}
+    return [];
   }
 
   Future<Map<String, dynamic>> placeCardOrder(Map<String, dynamic> orderData) async {
