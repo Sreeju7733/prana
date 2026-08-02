@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../main_navigation_screen.dart';
+import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import 'onboarding_screen.dart';
+import 'profile_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -25,10 +27,31 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     if (token != null && token.isNotEmpty) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
-      );
+      try {
+        final profileRes = await ApiService().getProfile();
+        final profile = profileRes['data'];
+        final fullName = profile != null ? profile['full_name'] : null;
+
+        if (!mounted) return;
+
+        if (fullName != null && fullName.toString().trim().isNotEmpty) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const ProfileScreen()),
+          );
+        }
+      } catch (_) {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+        );
+      }
     } else {
       Navigator.pushReplacement(
         context,
