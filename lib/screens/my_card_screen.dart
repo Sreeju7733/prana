@@ -95,19 +95,26 @@ class _MyCardScreenState extends State<MyCardScreen> {
       final profile = dashboard['profile'] as Map<String, dynamic>?;
       final allergies = await _apiService.getAllergies().catchError((_) => []);
       final contacts = await _apiService.getEmergencyContacts().catchError((_) => []);
+      final securityData = await _apiService.getCardSecurity().catchError((_) => <String, dynamic>{});
 
-      if (profile != null && mounted) {
+      if (mounted) {
         setState(() {
-          _userName = (profile['full_name'] ?? 'Sreeju S').toString().trim();
-          _pranaId = (profile['prana_id'] ?? 'PRAN-2973CAC1').toString().trim();
-          _bloodGroup = (profile['blood_group'] ?? 'B+').toString().trim();
-          _userGender = (profile['gender'] ?? 'Male').toString();
+          if (securityData.containsKey('is_suspended')) {
+            _cardActive = !(securityData['is_suspended'] == true);
+          }
 
-          if (profile['date_of_birth'] != null) {
-            try {
-              final dobYear = DateTime.parse(profile['date_of_birth'].toString()).year;
-              _userAge = DateTime.now().year - dobYear;
-            } catch (_) {}
+          if (profile != null) {
+            _userName = (profile['full_name'] ?? 'Sreeju S').toString().trim();
+            _pranaId = (profile['prana_id'] ?? 'PRAN-2973CAC1').toString().trim();
+            _bloodGroup = (profile['blood_group'] ?? 'B+').toString().trim();
+            _userGender = (profile['gender'] ?? 'Male').toString();
+
+            if (profile['date_of_birth'] != null) {
+              try {
+                final dobYear = DateTime.parse(profile['date_of_birth'].toString()).year;
+                _userAge = DateTime.now().year - dobYear;
+              } catch (_) {}
+            }
           }
 
           if (allergies.isNotEmpty) {
@@ -115,7 +122,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
             final algName = critical['allergen'] ?? critical['name'] ?? 'Allergy';
             final algSev = critical['severity'] ?? 'Severe';
             _criticalAllergyText = '⚠️ $algName — $algSev';
-          } else if (profile['no_known_allergies'] == true) {
+          } else if (profile?['no_known_allergies'] == true) {
             _criticalAllergyText = '✅ No Known Drug Allergies';
           }
 
