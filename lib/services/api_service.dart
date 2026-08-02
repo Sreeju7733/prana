@@ -587,13 +587,10 @@ class ApiService {
   }
 
   Future<List<dynamic>> getScanHistory({bool forceRefresh = false}) async {
-    if (!forceRefresh && !HealthCacheManager.isDirty && HealthCacheManager.scanHistoryData != null) {
-      return HealthCacheManager.scanHistoryData!;
-    }
     try {
       final token = await StorageService().getToken();
       final response = await http.get(
-        Uri.parse('$baseUrl/api/card/scans'),
+        Uri.parse('$baseUrl/api/card/scan-history'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {

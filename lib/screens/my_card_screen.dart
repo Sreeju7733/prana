@@ -976,129 +976,152 @@ class _MyCardScreenState extends State<MyCardScreen> {
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              child: Column(
-                children: List.generate(_scanHistory.length, (index) {
-                  final item = _scanHistory[index];
-                  final isFirst = index == 0;
-                  final isLast = index == _scanHistory.length - 1;
+              child: _scanHistory.isEmpty
+                  ? const Row(
+                      children: [
+                        Icon(Icons.qr_code_scanner_outlined, color: Color(0xFF94A3B8), size: 24),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'No field scans yet',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF334155)),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'When someone scans your emergency card, the activity and GPS log will show here in real-time.',
+                                style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: List.generate(_scanHistory.length, (index) {
+                        final item = _scanHistory[index];
+                        final isFirst = index == 0;
+                        final isLast = index == _scanHistory.length - 1;
 
-                  return InkWell(
-                    onTap: () => _showScanDetailModal(context, item),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6.0),
-                      child: IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Tree Connector Column
-                            SizedBox(
-                              width: 24,
-                              child: Column(
+                        return InkWell(
+                          onTap: () => _showScanDetailModal(context, item),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6.0),
+                            child: IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  Expanded(
-                                    child: Container(
-                                      width: 2,
-                                      color: isFirst ? Colors.transparent : const Color(0xFFCBD5E1),
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 10,
-                                    height: 10,
-                                    decoration: BoxDecoration(
-                                      color: item.tierColor,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 2),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: item.tierColor.withValues(alpha: 0.4),
-                                          blurRadius: 4,
+                                  // Tree Connector Column
+                                  SizedBox(
+                                    width: 24,
+                                    child: Column(
+                                      children: [
+                                        Expanded(
+                                          child: Container(
+                                            width: 2,
+                                            color: isFirst ? Colors.transparent : const Color(0xFFCBD5E1),
+                                          ),
+                                        ),
+                                        Container(
+                                          width: 10,
+                                          height: 10,
+                                          decoration: BoxDecoration(
+                                            color: item.tierColor,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: Colors.white, width: 2),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: item.tierColor.withValues(alpha: 0.4),
+                                                blurRadius: 4,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Container(
+                                            width: 2,
+                                            color: isLast ? Colors.transparent : const Color(0xFFCBD5E1),
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
+                                  // Content Item
                                   Expanded(
                                     child: Container(
-                                      width: 2,
-                                      color: isLast ? Colors.transparent : const Color(0xFFCBD5E1),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF8FAFC),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: const Color(0xFFF1F5F9)),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                item.timeLabel,
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                                              ),
+                                              Text(
+                                                '• ${item.location}',
+                                                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Scanner: ${item.scannerName}',
+                                            style: const TextStyle(fontSize: 12, color: Color(0xFF334155), fontWeight: FontWeight.w500),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: isFirst ? const Color(0xFFE0F2FE) : const Color(0xFFF1F5F9),
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(color: isFirst ? const Color(0xFFBAE6FD) : const Color(0xFFE2E8F0)),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    isFirst ? Icons.map_outlined : Icons.info_outline_rounded,
+                                                    size: 13,
+                                                    color: isFirst ? const Color(0xFF0369A1) : const Color(0xFF475569),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    isFirst ? '[View on Map]' : '[View Details]',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: isFirst ? const Color(0xFF0369A1) : const Color(0xFF475569),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            // Content Item
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF8FAFC),
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: const Color(0xFFF1F5F9)),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          item.timeLabel,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
-                                        ),
-                                        Text(
-                                          '• ${item.location}',
-                                          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Scanner: ${item.scannerName}',
-                                      style: const TextStyle(fontSize: 12, color: Color(0xFF334155), fontWeight: FontWeight.w500),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: isFirst ? const Color(0xFFE0F2FE) : const Color(0xFFF1F5F9),
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: isFirst ? const Color(0xFFBAE6FD) : const Color(0xFFE2E8F0)),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              isFirst ? Icons.map_outlined : Icons.info_outline_rounded,
-                                              size: 13,
-                                              color: isFirst ? const Color(0xFF0369A1) : const Color(0xFF475569),
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              isFirst ? '[View on Map]' : '[View Details]',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                                color: isFirst ? const Color(0xFF0369A1) : const Color(0xFF475569),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      }),
                     ),
-                  );
-                }),
-              ),
             ),
           ],
         ),
