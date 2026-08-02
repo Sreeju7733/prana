@@ -902,68 +902,155 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 24),
 
-              // 6. Recent Activity / Scan Log (Explained purpose empty state)
-              Text(
-                'RECENT FIELD SCANS',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                  color: Colors.grey.shade600,
-                ),
+              // 6. Emergency Contacts Management Section (Add, Edit, Delete)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'EMERGENCY CONTACTS',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => _showAddOrEditContactModal(context),
+                    icon: const Icon(Icons.add, size: 16, color: Color(0xFF0D9488)),
+                    label: const Text('Add Contact', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: recentScans.isEmpty
-                    ? const Row(
+              FutureBuilder<List<dynamic>>(
+                future: _apiService.getEmergencyContacts(),
+                builder: (context, snapshot) {
+                  final contacts = snapshot.data ?? [];
+                  if (snapshot.connectionState == ConnectionState.waiting && contacts.isEmpty) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: const Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0D9488)),
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (contacts.isEmpty) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
                         children: [
-                          Icon(Icons.qr_code_scanner_outlined, color: Color(0xFF94A3B8), size: 24),
-                          SizedBox(width: 12),
-                          Expanded(
+                          const Icon(Icons.contact_phone_outlined, color: Color(0xFF94A3B8), size: 24),
+                          const SizedBox(width: 12),
+                          const Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'No field scans yet',
+                                  'No emergency contacts added',
                                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF334155)),
                                 ),
                                 SizedBox(height: 2),
                                 Text(
-                                  'This shows when someone scans your emergency QR — you\'ll be notified instantly.',
+                                  'Add trusted family or doctors to notify automatically when your card is scanned.',
                                   style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                                 ),
                               ],
                             ),
                           ),
-                        ],
-                      )
-                    : Row(
-                        children: [
-                          const CircleAvatar(
-                            backgroundColor: Color(0xFFCCFBF1),
-                            child: Icon(Icons.qr_code_scanner, color: Color(0xFF0D9488), size: 20),
+                          TextButton(
+                            onPressed: () => _showAddOrEditContactModal(context),
+                            child: const Text('Add', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
                           ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(recentScans.first['responder_org'] ?? 'AIIMS Emergency (Paramedic)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
-                                const SizedBox(height: 2),
-                                Text('Scanned ${recentScans.first['scanned_at'] != null ? recentScans.first['scanned_at'].toString().split('T').first : "recently"} • ${recentScans.first['location_city'] ?? "IN"}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.verified_outlined, color: Color(0xFF0D9488), size: 18),
                         ],
                       ),
+                    );
+                  }
+
+                  return Column(
+                    children: contacts.map((c) {
+                      final String name = c['name'] ?? 'Emergency Contact';
+                      final String rel = c['relationship'] ?? 'Family';
+                      final String contactId = c['id']?.toString() ?? '';
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFCCFBF1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.person, color: Color(0xFF0D9488), size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    rel,
+                                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, color: Color(0xFF0D9488), size: 20),
+                              onPressed: () => _showAddOrEditContactModal(context, contact: c),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
+                              onPressed: () async {
+                                if (contactId.isNotEmpty) {
+                                  try {
+                                    await _apiService.deleteEmergencyContact(contactId);
+                                    setState(() {});
+                                  } catch (_) {}
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
               ),
               const SizedBox(height: 20),
             ],
@@ -1008,6 +1095,106 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
+    );
+  void _showAddOrEditContactModal(BuildContext context, {Map<String, dynamic>? contact}) {
+    final nameController = TextEditingController(text: contact?['name'] ?? '');
+    final relController = TextEditingController(text: contact?['relationship'] ?? 'Family');
+    final phoneController = TextEditingController(text: contact?['phone'] ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    contact == null ? 'Add Emergency Contact' : 'Edit Emergency Contact',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'Contact Name',
+                  prefixIcon: const Icon(Icons.person_outline),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: relController,
+                decoration: InputDecoration(
+                  labelText: 'Relationship (e.g. Spouse, Father, Doctor)',
+                  prefixIcon: const Icon(Icons.people_outline),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: 'Phone Number (+91...)',
+                  prefixIcon: const Icon(Icons.phone_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D9488),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () async {
+                    if (nameController.text.trim().isEmpty || phoneController.text.trim().isEmpty) return;
+                    try {
+                      await _apiService.addEmergencyContact({
+                        'name': nameController.text.trim(),
+                        'relationship': relController.text.trim(),
+                        'phone': phoneController.text.trim(),
+                        'is_primary': true,
+                      });
+                      if (context.mounted) {
+                        Navigator.pop(ctx);
+                        setState(() {});
+                      }
+                    } catch (_) {
+                      if (context.mounted) Navigator.pop(ctx);
+                    }
+                  },
+                  child: Text(
+                    contact == null ? 'Save Emergency Contact' : 'Update Emergency Contact',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

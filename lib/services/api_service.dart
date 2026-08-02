@@ -677,5 +677,14 @@ class ApiService {
     } else {
       return [];
     }
+  Future<void> deleteEmergencyContact(String id) async {
+    final token = await StorageService().getToken();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/emergency-contacts/$id'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete emergency contact');
+    }
   }
 }
