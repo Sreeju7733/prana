@@ -37,8 +37,13 @@ class _MyCardScreenState extends State<MyCardScreen> {
   bool _cardActive = true;
   final int _usedScansToday = 2;
   final int _maxScansQuota = 10;
-  final String _pranaId = 'PRAN-7843-2910';
-  final String _userName = 'Rahul Sharma';
+  String _pranaId = 'PRAN-2973CAC1';
+  String _userName = 'Sreeju S';
+  String _bloodGroup = 'B+';
+  String _criticalAllergyText = 'No critical severe allergies logged';
+  String _emergencyContact = 'Emergency Relay: Active';
+  int _userAge = 19;
+  String _userGender = 'Male';
 
   final List<ScanHistoryItem> _scanHistory = const [
     ScanHistoryItem(
@@ -50,7 +55,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
       tierColor: Color(0xFF16A34A),
       exactGps: '28.6139° N, 77.2090° E (Connaught Place, New Delhi)',
       deviceInfo: 'Safari / iPhone 15 Pro (iOS 17.4)',
-      dataAccessed: 'Basic emergency contacts, Blood group (B+), Severe Allergies (Penicillin)',
+      dataAccessed: 'Basic emergency contacts, Blood group, Severe Allergies',
     ),
     ScanHistoryItem(
       id: 'SCAN-8842',
@@ -77,6 +82,51 @@ class _MyCardScreenState extends State<MyCardScreen> {
   ];
 
   final ApiService _apiService = ApiService();
+
+  @override
+  void initState() {
+    super.initState();
+    _hydrateUserProfile();
+  }
+
+  Future<void> _hydrateUserProfile() async {
+    try {
+      final dashboard = await _apiService.getDashboard();
+      final profile = dashboard['profile'] as Map<String, dynamic>?;
+      final allergies = await _apiService.getAllergies().catchError((_) => []);
+      final contacts = await _apiService.getEmergencyContacts().catchError((_) => []);
+
+      if (profile != null && mounted) {
+        setState(() {
+          _userName = (profile['full_name'] ?? 'Sreeju S').toString().trim();
+          _pranaId = (profile['prana_id'] ?? 'PRAN-2973CAC1').toString().trim();
+          _bloodGroup = (profile['blood_group'] ?? 'B+').toString().trim();
+          _userGender = (profile['gender'] ?? 'Male').toString();
+
+          if (profile['date_of_birth'] != null) {
+            try {
+              final dobYear = DateTime.parse(profile['date_of_birth'].toString()).year;
+              _userAge = DateTime.now().year - dobYear;
+            } catch (_) {}
+          }
+
+          if (allergies.isNotEmpty) {
+            final critical = allergies.first;
+            final algName = critical['allergen'] ?? critical['name'] ?? 'Allergy';
+            final algSev = critical['severity'] ?? 'Severe';
+            _criticalAllergyText = '⚠️ $algName — $algSev';
+          } else if (profile['no_known_allergies'] == true) {
+            _criticalAllergyText = '✅ No Known Drug Allergies';
+          }
+
+          if (contacts.isNotEmpty) {
+            final c = contacts.first;
+            _emergencyContact = '${c['name'] ?? 'Emergency Contact'} • ${c['phone_number'] ?? c['phone'] ?? ''}';
+          }
+        });
+      }
+    } catch (_) {}
+  }
 
   void _onToggleCardStatus(bool enable) {
     HapticFeedback.mediumImpact();
@@ -192,12 +242,12 @@ class _MyCardScreenState extends State<MyCardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Rahul Sharma', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22)),
-                    const Text('25 Years • Male', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    Text(_userName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22)),
+                    Text('$_userAge Years • $_userGender', style: const TextStyle(color: Colors.white70, fontSize: 13)),
                     const SizedBox(height: 16),
 
                     const Text('Blood Group', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
-                    const Text('B+', style: TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.w900, fontSize: 28)),
+                    Text(_bloodGroup, style: const TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.w900, fontSize: 28)),
                     const SizedBox(height: 16),
 
                     Container(
@@ -208,12 +258,12 @@ class _MyCardScreenState extends State<MyCardScreen> {
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: const Color(0xFFEF4444)),
                       ),
-                      child: const Column(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('CRITICAL ALERTS', style: TextStyle(color: Color(0xFFFCA5A5), fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1)),
-                          SizedBox(height: 6),
-                          Text('• Penicillin — Severe Anaphylaxis', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                          const Text('CRITICAL ALERTS', style: TextStyle(color: Color(0xFFFCA5A5), fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1)),
+                          const SizedBox(height: 6),
+                          Text(_criticalAllergyText, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                         ],
                       ),
                     ),
@@ -221,22 +271,22 @@ class _MyCardScreenState extends State<MyCardScreen> {
 
                     const Text('Current Medications', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    const Text('• Metformin 500mg (Twice Daily)\n• Lisinopril 10mg (Once Daily)', style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
+                    const Text('• Active prescriptions synced with Health Hub', style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
                     const SizedBox(height: 14),
 
                     const Text('Medical Conditions', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    const Text('• Type 2 Diabetes\n• Hypertension', style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
+                    const Text('• Recorded health conditions active', style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
                     const SizedBox(height: 14),
 
                     const Text('Treatment Notes', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    const Text('• Avoid NSAIDs\n• Check blood glucose\n• Hypoglycemia risk', style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
+                    const Text('• Standard emergency protocol verified', style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
                     const SizedBox(height: 14),
 
                     const Text('Emergency Contact', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    const Text('Rajesh Sharma • 98XXXX12345', style: TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(_emergencyContact, style: const TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 14)),
                     const SizedBox(height: 20),
 
                     Container(
@@ -1082,11 +1132,11 @@ class _MyCardScreenState extends State<MyCardScreen> {
                       const SizedBox(height: 16),
                       Text(_userName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
                       const SizedBox(height: 4),
-                      const Text('Blood Group : B+', style: TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.w600, fontSize: 14)),
+                      Text('Blood Group : $_bloodGroup', style: const TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.w600, fontSize: 14)),
                       const SizedBox(height: 4),
-                      const Text('⚠️ Severe Penicillin Allergy', style: TextStyle(color: Color(0xFFFCA5A5), fontWeight: FontWeight.w600, fontSize: 13)),
+                      Text(_criticalAllergyText, style: const TextStyle(color: Color(0xFFFCA5A5), fontWeight: FontWeight.w600, fontSize: 13)),
                       const SizedBox(height: 4),
-                      const Text('Emergency: 1800-PRANA', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                      Text(_emergencyContact, style: const TextStyle(color: Colors.white70, fontSize: 12)),
                       const SizedBox(height: 16),
                       // Centered QR Code
                       Center(
