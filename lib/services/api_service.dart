@@ -11,6 +11,8 @@ class HealthCacheManager {
   static List<dynamic>? surgeries;
   static List<dynamic>? devices;
   static List<dynamic>? vitals;
+  static Map<String, dynamic>? cardSecurityData;
+  static List<dynamic>? scanHistoryData;
 
   static bool isDirty = true;
 
@@ -24,6 +26,8 @@ class HealthCacheManager {
     surgeries = null;
     devices = null;
     vitals = null;
+    cardSecurityData = null;
+    scanHistoryData = null;
   }
 }
 
