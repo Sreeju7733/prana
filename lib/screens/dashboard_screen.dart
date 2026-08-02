@@ -82,6 +82,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _apiService.getMedications().catchError((_) => []),
             _apiService.getEmergencyContacts().catchError((_) => []),
             _apiService.getProfile().catchError((_) => <String, dynamic>{}),
+            _apiService.getConditions().catchError((_) => []),
+            _apiService.getSurgeries().catchError((_) => []),
+            _apiService.getDevices().catchError((_) => []),
+            _apiService.getVitals(latestOnly: true).catchError((_) => []),
           ]),
           builder: (context, snapshot) {
             final allergies = snapshot.data != null ? snapshot.data![0] as List : [];
@@ -90,6 +94,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             final fullProfile = snapshot.data != null && snapshot.data!.length > 3 && snapshot.data![3] is Map
                 ? (snapshot.data![3]['data'] ?? snapshot.data![3])
                 : null;
+            final conditions = snapshot.data != null && snapshot.data!.length > 4 ? snapshot.data![4] as List : [];
+            final surgeries = snapshot.data != null && snapshot.data!.length > 5 ? snapshot.data![5] as List : [];
+            final devices = snapshot.data != null && snapshot.data!.length > 6 ? snapshot.data![6] as List : [];
+            final vitals = snapshot.data != null && snapshot.data!.length > 7 ? snapshot.data![7] as List : [];
 
             final profile = (fullProfile is Map ? fullProfile : _dashboardData?['profile']) as Map?;
             final String name = profile?['full_name'] ?? 'User';
@@ -100,7 +108,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             final bool noKnownAllergies = profile?['no_known_allergies'] == true || (allergies.isEmpty && profile?['allergies_recorded'] == true);
 
             return Container(
-              height: MediaQuery.of(context).size.height * 0.85,
+              height: MediaQuery.of(context).size.height * 0.88,
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -140,13 +148,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                   ),
-                  const Divider(height: 32),
+                  const Divider(height: 28),
                   Expanded(
                     child: snapshot.connectionState == ConnectionState.waiting
                         ? const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)))
                         : ListView(
                             children: [
-                              // Patient Identifier Card
+                              // 1. Patient Identifier Card
                               Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
@@ -175,9 +183,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 20),
-                              
-                              // Critical Allergies
+                              const SizedBox(height: 14),
+
+                              // 2. Critical Allergies
                               Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
@@ -231,9 +239,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 14),
 
-                              // Active Medications
+                              // 3. Active Medications
                               Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
@@ -256,13 +264,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       const Text('No active medications recorded.', style: TextStyle(color: Color(0xFF64748B)))
                                     else
                                       ...medications.map((m) {
-                                        final name = m['name'] ?? 'Medication';
+                                        final mName = m['name'] ?? 'Medication';
                                         final dose = m['dose'] ?? '';
                                         final freq = m['frequency'] ?? '';
                                         return Padding(
                                           padding: const EdgeInsets.only(bottom: 4),
                                           child: Text(
-                                            '• $name ${dose.toString().isNotEmpty ? dose : ""} ${freq.toString().isNotEmpty ? "($freq)" : ""}'.trim(),
+                                            '• $mName ${dose.toString().isNotEmpty ? dose : ""} ${freq.toString().isNotEmpty ? "($freq)" : ""}'.trim(),
                                             style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF14532D)),
                                           ),
                                         );
@@ -270,9 +278,162 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 14),
 
-                              // Emergency Relay Contact
+                              // 4. Active Medical Conditions
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF5F3FF),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFDDD6FE)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Row(
+                                      children: [
+                                        Icon(Icons.assignment_outlined, color: Color(0xFF7C3AED), size: 20),
+                                        SizedBox(width: 8),
+                                        Text('MEDICAL CONDITIONS', style: TextStyle(color: Color(0xFF7C3AED), fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    if (conditions.isEmpty)
+                                      const Text('No chronic conditions recorded.', style: TextStyle(color: Color(0xFF64748B)))
+                                    else
+                                      ...conditions.map((c) {
+                                        final cName = c['name'] ?? 'Condition';
+                                        final cStatus = c['status'] ?? 'Active';
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 4),
+                                          child: Text(
+                                            '• $cName ($cStatus)',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF5B21B6)),
+                                          ),
+                                        );
+                                      }),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+
+                              // 5. Medical Devices & Implants
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF7ED),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFFED7AA)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Row(
+                                      children: [
+                                        Icon(Icons.memory_outlined, color: Color(0xFFC2410C), size: 20),
+                                        SizedBox(width: 8),
+                                        Text('IMPLANTED DEVICES / WEARABLES', style: TextStyle(color: Color(0xFFC2410C), fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    if (devices.isEmpty)
+                                      const Text('No medical devices or implants logged.', style: TextStyle(color: Color(0xFF64748B)))
+                                    else
+                                      ...devices.map((d) {
+                                        final devName = d['device_name'] ?? d['name'] ?? 'Medical Device';
+                                        final serial = d['serial_number'] ?? d['serial'] ?? '';
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 4),
+                                          child: Text(
+                                            '• $devName ${serial.toString().isNotEmpty ? "(SN: $serial)" : ""}'.trim(),
+                                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF9A3412)),
+                                          ),
+                                        );
+                                      }),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+
+                              // 6. Surgeries & Procedures
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFDF4FF),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFF5D0FE)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Row(
+                                      children: [
+                                        Icon(Icons.healing_outlined, color: Color(0xFFC026D3), size: 20),
+                                        SizedBox(width: 8),
+                                        Text('SURGERIES & PROCEDURES', style: TextStyle(color: Color(0xFFC026D3), fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    if (surgeries.isEmpty)
+                                      const Text('No prior surgeries or procedures recorded.', style: TextStyle(color: Color(0xFF64748B)))
+                                    else
+                                      ...surgeries.map((s) {
+                                        final procName = s['procedure_name'] ?? s['name'] ?? 'Procedure';
+                                        final hospital = s['hospital'] ?? '';
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 4),
+                                          child: Text(
+                                            '• $procName ${hospital.toString().isNotEmpty ? "($hospital)" : ""}'.trim(),
+                                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF86198F)),
+                                          ),
+                                        );
+                                      }),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+
+                              // 7. Last Recorded Vitals
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0FDF4),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Row(
+                                      children: [
+                                        Icon(Icons.favorite_outline, color: Color(0xFF15803D), size: 20),
+                                        SizedBox(width: 8),
+                                        Text('LAST RECORDED VITALS', style: TextStyle(color: Color(0xFF15803D), fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    if (vitals.isEmpty)
+                                      const Text('No vital logs filed.', style: TextStyle(color: Color(0xFF64748B)))
+                                    else
+                                      ...vitals.take(4).map((v) {
+                                        final type = (v['vital_type'] ?? 'vital').toString().replaceAll('_', ' ').toUpperCase();
+                                        final val = v['value'] ?? '';
+                                        final unit = v['unit'] ?? '';
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 4),
+                                          child: Text(
+                                            '• $type: $val $unit'.trim(),
+                                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF166534)),
+                                          ),
+                                        );
+                                      }),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+
+                              // 8. Emergency Relay Contact
                               Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
