@@ -138,6 +138,10 @@ class _OtpScreenState extends State<OtpScreen> {
       }
     } catch (e) {
       if (mounted) {
+        for (var c in _controllers) {
+          c.clear();
+        }
+        _focusNodes[0].requestFocus();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
         );
@@ -150,11 +154,19 @@ class _OtpScreenState extends State<OtpScreen> {
   void _handleResendOtp() async {
     if (_secondsRemaining > 0) return;
     try {
-      await _apiService.sendOtp(widget.phoneNumber);
+      final res = await _apiService.sendOtp(widget.phoneNumber);
       _startResendTimer();
+      for (var c in _controllers) {
+        c.clear();
+      }
+      _focusNodes[0].requestFocus();
       if (mounted) {
+        final devOtp = res['otp'];
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('New OTP sent successfully!')),
+          SnackBar(
+            content: Text(devOtp != null ? 'New OTP sent! (Dev Code: $devOtp)' : 'New OTP sent successfully!'),
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     } catch (e) {

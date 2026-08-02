@@ -4,7 +4,7 @@ import '../services/api_service.dart';
 import 'prescription_scanner_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  final Function(int)? onNavigateTab;
+  final Function(int tabIndex, {int subTabIndex, bool openAddModal})? onNavigateTab;
   const DashboardScreen({super.key, this.onNavigateTab});
 
   @override
@@ -15,7 +15,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final ApiService _apiService = ApiService();
 
   Map<String, dynamic>? _dashboardData;
-  bool _isRegeneratingBriefing = false;
 
   @override
   void initState() {
@@ -34,33 +33,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (_) {}
   }
 
-  Future<void> _handleRegenerateBriefing() async {
-    setState(() => _isRegeneratingBriefing = true);
-    try {
-      await _apiService.regenerateBriefing();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('AI briefing regenerated successfully!')),
-        );
-        _fetchDashboardData();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isRegeneratingBriefing = false);
-    }
-  }
-
   String _getUserFirstName() {
     final fullName = _dashboardData?['profile']?['full_name'];
     if (fullName != null && fullName.toString().trim().isNotEmpty) {
       return fullName.toString().trim().split(' ').first;
     }
     return 'User';
+  }
+
+  String _formatDob(String raw) {
+    final s = raw.trim();
+    if (s.isEmpty || s == 'null' || s == 'Not specified') return 'Not specified';
+    try {
+      final clean = s.split('T').first;
+      final parts = clean.split('-');
+      if (parts.length == 3) {
+        final year = parts[0];
+        final monthInt = int.tryParse(parts[1]) ?? 1;
+        final day = int.tryParse(parts[2]) ?? 1;
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        final monthStr = months[(monthInt - 1).clamp(0, 11)];
+        return '$day $monthStr $year';
+      }
+    } catch (_) {}
+    return s;
   }
 
   void _copyPranaId() {
@@ -79,231 +75,464 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.85,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+      builder: (context) {
+        return FutureBuilder<List<dynamic>>(
+          future: Future.wait([
+            _apiService.getAllergies().catchError((_) => []),
+            _apiService.getMedications().catchError((_) => []),
+            _apiService.getEmergencyContacts().catchError((_) => []),
+            _apiService.getProfile().catchError((_) => <String, dynamic>{}),
+          ]),
+          builder: (context, snapshot) {
+            final allergies = snapshot.data != null ? snapshot.data![0] as List : [];
+            final medications = snapshot.data != null ? snapshot.data![1] as List : [];
+            final contacts = snapshot.data != null ? snapshot.data![2] as List : [];
+            final fullProfile = snapshot.data != null && snapshot.data!.length > 3 && snapshot.data![3] is Map
+                ? (snapshot.data![3]['data'] ?? snapshot.data![3])
+                : null;
+
+            final profile = (fullProfile is Map ? fullProfile : _dashboardData?['profile']) as Map?;
+            final String name = profile?['full_name'] ?? 'User';
+            final String bloodGroup = profile?['blood_group'] ?? 'B+';
+            final String pranaId = profile?['prana_id'] ?? 'PRAN-2973CAC1';
+            final String rawDob = (profile?['date_of_birth'] ?? profile?['dob'] ?? profile?['dateOfBirth'] ?? '').toString();
+            final String dob = _formatDob(rawDob);
+            final bool noKnownAllergies = profile?['no_known_allergies'] == true || (allergies.isEmpty && profile?['allergies_recorded'] == true);
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.medical_services_outlined, color: Colors.red, size: 24),
-                ),
-                const SizedBox(width: 12),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Paramedic Emergency View', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    Text('What first responders see on QR scan', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-                  ],
-                ),
-              ],
-            ),
-            const Divider(height: 32),
-            Expanded(
-              child: ListView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Patient Identifier Card
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundColor: const Color(0xFF0D9488),
-                          child: Text(_dashboardData?['profile']?['blood_group'] ?? 'B+', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
-                        ),
-                        const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(_dashboardData?['profile']?['full_name'] ?? 'User', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            const Text('DOB: 15 May 1995', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
-                            Text('PRANA ID: ${_dashboardData?['profile']?['prana_id'] ?? "PRAN-2973CAC1"}', style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w600, color: Color(0xFF0D9488))),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  
-                  // Critical Warnings
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFFCA5A5)),
-                    ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
-                            SizedBox(width: 8),
-                            Text('CRITICAL ALLERGIES', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1)),
-                          ],
-                        ),
-                        SizedBox(height: 8),
-                        Text('• PENICILLIN (Severe - Anaphylaxis Risk)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF991B1B))),
-                        Text('• PEANUTS (Moderate - Hives/Swelling)', style: TextStyle(color: Color(0xFF991B1B))),
-                      ],
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // Active Medications
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFF86EFAC)),
-                    ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.medication_outlined, color: Color(0xFF16A34A), size: 20),
-                            SizedBox(width: 8),
-                            Text('ACTIVE MEDICATIONS', style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1)),
-                          ],
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          shape: BoxShape.circle,
                         ),
-                        SizedBox(height: 8),
-                        Text('• Metformin 500mg (Twice Daily)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF14532D))),
-                        Text('• Atorvastatin 10mg (Once Daily at night)', style: TextStyle(color: Color(0xFF14532D))),
-                      ],
-                    ),
+                        child: const Icon(Icons.medical_services_outlined, color: Colors.red, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Paramedic Emergency View', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          Text('What first responders see on QR scan', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
+                  const Divider(height: 32),
+                  Expanded(
+                    child: snapshot.connectionState == ConnectionState.waiting
+                        ? const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)))
+                        : ListView(
+                            children: [
+                              // Patient Identifier Card
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 28,
+                                      backgroundColor: const Color(0xFF0D9488),
+                                      child: Text(bloodGroup, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                          Text('DOB: $dob', style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                                          Text('PRANA ID: $pranaId', style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w600, color: Color(0xFF0D9488))),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              
+                              // Critical Allergies
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: noKnownAllergies ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: noKnownAllergies ? const Color(0xFF86EFAC) : const Color(0xFFFCA5A5)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          noKnownAllergies ? Icons.check_circle_outline_rounded : Icons.warning_amber_rounded,
+                                          color: noKnownAllergies ? const Color(0xFF16A34A) : Colors.red,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          noKnownAllergies ? 'NO KNOWN ALLERGIES' : 'CRITICAL ALLERGIES',
+                                          style: TextStyle(
+                                            color: noKnownAllergies ? const Color(0xFF16A34A) : Colors.red,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            letterSpacing: 1,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    if (noKnownAllergies)
+                                      const Text('✅ Patient has recorded No Known Drug or Food Allergies.', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF14532D)))
+                                    else if (allergies.isEmpty)
+                                      const Text('No allergy records filed.', style: TextStyle(color: Color(0xFF64748B)))
+                                    else
+                                      ...allergies.map((a) {
+                                        final allergen = (a['allergen'] ?? a['name'] ?? 'Allergy').toString().toUpperCase();
+                                        final severity = (a['severity'] ?? 'Severe').toString();
+                                        final reaction = a['reaction_description'] ?? a['reaction'];
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 4),
+                                          child: Text(
+                                            '• $allergen ($severity${reaction != null && reaction.toString().isNotEmpty ? " - $reaction" : ""})',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF991B1B)),
+                                          ),
+                                        );
+                                      }),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
 
-                  // Emergency Relay Contact
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0F9FF),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFBAE6FD)),
-                    ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.phone_in_talk_outlined, color: Color(0xFF0284C7), size: 20),
-                            SizedBox(width: 8),
-                            Text('EMERGENCY RELAY CONTACT', style: TextStyle(color: Color(0xFF0284C7), fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1)),
-                          ],
-                        ),
-                        SizedBox(height: 8),
-                        Text('Jane Doe (Wife) • +91 98765 43210', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0C4A6E))),
-                        Text('Relay Hotline: 1800-PRANA-RELAY (Option 1)', style: TextStyle(color: Color(0xFF0C4A6E), fontSize: 12)),
-                      ],
-                    ),
+                              // Active Medications
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0FDF4),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFF86EFAC)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Row(
+                                      children: [
+                                        Icon(Icons.medication_outlined, color: Color(0xFF16A34A), size: 20),
+                                        SizedBox(width: 8),
+                                        Text('ACTIVE MEDICATIONS', style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    if (medications.isEmpty)
+                                      const Text('No active medications recorded.', style: TextStyle(color: Color(0xFF64748B)))
+                                    else
+                                      ...medications.map((m) {
+                                        final name = m['name'] ?? 'Medication';
+                                        final dose = m['dose'] ?? '';
+                                        final freq = m['frequency'] ?? '';
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 4),
+                                          child: Text(
+                                            '• $name ${dose.toString().isNotEmpty ? dose : ""} ${freq.toString().isNotEmpty ? "($freq)" : ""}'.trim(),
+                                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF14532D)),
+                                          ),
+                                        );
+                                      }),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Emergency Relay Contact
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0F9FF),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFBAE6FD)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Row(
+                                      children: [
+                                        Icon(Icons.phone_in_talk_outlined, color: Color(0xFF0284C7), size: 20),
+                                        SizedBox(width: 8),
+                                        Text('EMERGENCY RELAY CONTACT', style: TextStyle(color: Color(0xFF0284C7), fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    if (contacts.isEmpty)
+                                      const Text('No primary emergency contact recorded.', style: TextStyle(color: Color(0xFF64748B)))
+                                    else
+                                      ...contacts.map((c) {
+                                        final cName = c['name'] ?? 'Primary Contact';
+                                        final cRel = c['relationship'] ?? 'Family';
+                                        final cPhone = c['phone_number'] ?? c['phone'] ?? '';
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 4),
+                                          child: Text('$cName ($cRel) • $cPhone', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0C4A6E))),
+                                        );
+                                      }),
+                                    const SizedBox(height: 4),
+                                    const Text('Relay Hotline: 1800-PRANA-RELAY (Option 1)', style: TextStyle(color: Color(0xFF0C4A6E), fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
-  void _showBriefingModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+  Widget _buildEmergencySummaryCard(Map<String, dynamic>? data, String bloodGroup, String topAllergy, int medsCount, int conditionsCount) {
+    final profile = data?['profile'];
+    final healthSummary = data?['health_summary'];
+    final bool noKnownAllergies = profile?['no_known_allergies'] == true || (healthSummary?['allergies_count'] == 0 && profile?['allergies_recorded'] == true);
+
+    List<Widget> badges = [];
+
+    // Badge 1: Blood Group (High Visual Weight - Bystander Tier)
+    badges.add(
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFCA5A5), width: 1.5),
         ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Row(
-              children: [
-                Icon(Icons.auto_awesome, color: Color(0xFF0D9488)),
-                SizedBox(width: 8),
-                Text('AI Emergency Medical Briefing', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 4),
-            const Text('Summarized from verified health records', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-            const Divider(height: 32),
-            const Expanded(
-              child: SingleChildScrollView(
-                child: Text(
-                  'PATIENT SUMMARY:\n'
-                  '• 29-year-old male with diagnosed Type 2 Diabetes Mellitus managed on Metformin 500mg BD.\n'
-                  '• CRITICAL WARNING: Severe anaphylactic allergy to Penicillin class antibiotics.\n'
-                  '• Vitals stable at last log (BP 128/82 mmHg, Fasting Glucose 142 mg/dL).\n'
-                  '• No prior cardiac events or surgical interventions recorded.\n'
-                  '• Emergency primary contact Jane Doe verified active on PRANA Relay.',
-                  style: TextStyle(fontSize: 14, height: 1.6, color: Color(0xFF334155)),
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Done'),
+            const Text('🩸 ', style: TextStyle(fontSize: 14)),
+            Text(
+              bloodGroup,
+              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Color(0xFFDC2626)),
             ),
           ],
         ),
       ),
     );
+
+    // Badge 2: Allergies State (High Visual Weight - Bystander Tier)
+    if (noKnownAllergies) {
+      badges.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0FDF4),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF86EFAC), width: 1.5),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('✅ ', style: TextStyle(fontSize: 14)),
+              Text(
+                'No Known Allergies',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF166534)),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (healthSummary?['critical_allergy'] != null) {
+      final ca = healthSummary['critical_allergy'];
+      badges.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF7ED),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFFDBA74), width: 1.5),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('⚠️ ', style: TextStyle(fontSize: 14)),
+              Text(
+                '${ca['allergen']} (${ca['severity'] ?? "Severe"})',
+                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Color(0xFFC2410C)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Badge 3: Active Meds Count (Muted Visual Weight - Paramedic Tier, Pluralization Fixed)
+    if (medsCount > 0) {
+      badges.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('💊 ', style: TextStyle(fontSize: 12)),
+              Text(
+                medsCount == 1 ? '1 Active Med' : '$medsCount Active Meds',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF64748B)),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      badges.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('💊 ', style: TextStyle(fontSize: 12)),
+              Text(
+                'No meds recorded',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: Color(0xFF94A3B8)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Badge 4: Conditions (Muted Visual Weight - Paramedic Tier)
+    if (conditionsCount > 0) {
+      badges.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('❤️ ', style: TextStyle(fontSize: 12)),
+              Text(
+                conditionsCount == 1 ? '1 Condition' : '$conditionsCount Conditions',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF64748B)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: badges,
+    );
+  }
+
+  Widget _buildDynamicHintCard(int medsCount, int conditionsCount) {
+    if (medsCount == 0 && conditionsCount == 0) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FDFA),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF99F6E4)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Text('💊', style: TextStyle(fontSize: 18)),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "You haven't added your health records yet.",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              "Add prescriptions or medical conditions to inform first responders during emergencies.",
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () {
+                  if (widget.onNavigateTab != null) widget.onNavigateTab!(1, subTabIndex: 0, openAddModal: false);
+                },
+                child: const Text('Add Health Records', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Silence = everything is fine. Complete state suppresses the banner to avoid redundancy with the green Active status dot.
+    return const SizedBox.shrink();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    if (_dashboardData == null) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF8FAFC),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF0D9488)),
+        ),
+      );
+    }
 
     final profile = _dashboardData?['profile'];
     final healthSummary = _dashboardData?['health_summary'];
-    final briefing = _dashboardData?['briefing'];
     final recentScans = (_dashboardData?['recent_scans'] as List?) ?? [];
 
     final String pranaId = profile?['prana_id'] ?? 'PRAN-2973CAC1';
@@ -315,10 +544,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final int medsCount = healthSummary?['meds_count'] ?? 0;
     final int conditionsCount = healthSummary?['conditions_count'] ?? 0;
-    final int completionPct = profile?['profile_completion_pct'] ?? 80;
-    final bool isProfileIncomplete = completionPct < 100;
-    final List missingSections = (profile?['missing_sections'] as List?) ?? [];
-    final String nextMissing = missingSections.isNotEmpty ? missingSections.first.toString() : 'medications';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -329,7 +554,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Header (2 lines max: Active status + Hello + Monospace PRANA ID)
+              // 1. Header (2 lines max: Active status + Hello + Monospace PRANA ID + Trust Signal)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -354,6 +579,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Text(
                         'Hello, ${_getUserFirstName()}',
                         style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Profile verified & active',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF94A3B8)),
                       ),
                     ],
                   ),
@@ -387,79 +617,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 20),
 
-              // 2. Emergency Briefing (Promoted to position #2 with 4px teal accent border)
-              GestureDetector(
-                onTap: _showBriefingModal,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: const Border(
-                      left: BorderSide(color: Color(0xFF0D9488), width: 4),
-                      top: BorderSide(color: Color(0xFFE2E8F0)),
-                      right: BorderSide(color: Color(0xFFE2E8F0)),
-                      bottom: BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                    boxShadow: const [
-                      BoxShadow(color: Color(0x06000000), blurRadius: 12, offset: Offset(0, 3)),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.auto_awesome, color: Color(0xFF0D9488), size: 18),
-                              SizedBox(width: 8),
-                              Text(
-                                'Your Emergency Briefing',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Text(
-                                briefing?['generated_at'] != null ? briefing['generated_at'].toString().split('T').last.substring(0, 5) : '14:32',
-                                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                              ),
-                              IconButton(
-                                icon: _isRegeneratingBriefing
-                                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0D9488)))
-                                    : const Icon(Icons.refresh_rounded, size: 18, color: Color(0xFF64748B)),
-                                onPressed: _isRegeneratingBriefing ? null : _handleRegenerateBriefing,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        briefing?['text'] ??
-                        '• Type 2 Diabetes (Metformin 500mg BD)\n'
-                        '• Severe Penicillin Allergy (Anaphylaxis Risk)\n'
-                        '• Emergency Relay Jane Doe Verified',
-                        style: const TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF475569)),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Tap to view full →',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // 3. Health Overview (Equal-weight side by side badges + slim stat row)
+              // 3. Emergency Health Overview Card (Dynamic Badges)
               GestureDetector(
                 onTap: _showEmergencyPreviewModal,
                 child: Container(
@@ -469,89 +627,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFEF2F2),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: const Color(0xFFFCA5A5)),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Text('🩸 ', style: TextStyle(fontSize: 16)),
-                                  Text(
-                                    bloodGroup,
-                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFFDC2626)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 2,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFF7ED),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: const Color(0xFFFDBA74)),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Text('⚠️ ', style: TextStyle(fontSize: 14)),
-                                  Expanded(
-                                    child: Text(
-                                      topAllergy,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFC2410C)),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      (medsCount == 0 && conditionsCount == 0)
-                          ? InkWell(
-                              onTap: () {
-                                if (widget.onNavigateTab != null) widget.onNavigateTab!(1);
-                              },
-                              child: const Text(
-                                'Add your medications and conditions to complete your profile →',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0D9488)),
-                              ),
-                            )
-                          : Row(
-                              children: [
-                                Text('💊 $medsCount Meds', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                                const SizedBox(width: 16),
-                                Text('🏥 $conditionsCount Conditions', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                              ],
-                            ),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x04000000), blurRadius: 10, offset: Offset(0, 2)),
                     ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // 4. Profile Completion (Shows if < 100%)
-              if (isProfileIncomplete) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -559,25 +637,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Profile $completionPct% complete', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
-                          Text('Next: Add $nextMissing', style: const TextStyle(fontSize: 11, color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),
+                          const Text('Emergency Profile Summary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A))),
+                          const Text('View QR →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: completionPct / 100,
-                        backgroundColor: const Color(0xFFE2E8F0),
-                        color: theme.primaryColor,
-                        minHeight: 6,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
+                      const SizedBox(height: 12),
+                      _buildEmergencySummaryCard(_dashboardData, bloodGroup, topAllergy, medsCount, conditionsCount),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-              ],
+              ),
+              const SizedBox(height: 16),
 
-              // 5. Quick Actions (Ordered by priority: Allergy, Med, Scan RX, Vitals, Condition in unified Teal tone)
+              // 4. Dynamic Hint Card (Only rendered when profile incomplete)
+              _buildDynamicHintCard(medsCount, conditionsCount),
+
+              // 6. Adaptive Quick Actions (Horizontally Scrollable with peek hint)
               Text(
                 'QUICK ACTIONS',
                 style: TextStyle(
@@ -591,20 +666,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.only(right: 8.0),
                 child: Row(
                   children: [
                     _buildQuickActionButton(
                       icon: Icons.warning_amber_rounded,
-                      label: 'Add Allergy',
+                      label: (healthSummary?['allergies_count'] ?? 0) > 0 || profile?['no_known_allergies'] == true ? 'Manage Allergies' : 'Add Allergy',
                       onTap: () {
-                        if (widget.onNavigateTab != null) widget.onNavigateTab!(1);
+                        if (widget.onNavigateTab != null) widget.onNavigateTab!(1, subTabIndex: 1, openAddModal: false);
                       },
                     ),
                     _buildQuickActionButton(
                       icon: Icons.medication_outlined,
-                      label: 'Add Med',
+                      label: medsCount > 0 ? 'Manage Meds' : 'Add Med',
                       onTap: () {
-                        _showAddMedicationSheet(context);
+                        if (widget.onNavigateTab != null) widget.onNavigateTab!(1, subTabIndex: 0, openAddModal: false);
                       },
                     ),
                     _buildQuickActionButton(
@@ -621,14 +697,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       icon: Icons.favorite_outline,
                       label: 'Log Vitals',
                       onTap: () {
-                        if (widget.onNavigateTab != null) widget.onNavigateTab!(1);
+                        if (widget.onNavigateTab != null) widget.onNavigateTab!(1, subTabIndex: 3, openAddModal: false);
                       },
                     ),
                     _buildQuickActionButton(
                       icon: Icons.assignment_outlined,
-                      label: 'Add Condition',
+                      label: conditionsCount > 0 ? 'Manage Conditions' : 'Add Condition',
                       onTap: () {
-                        if (widget.onNavigateTab != null) widget.onNavigateTab!(1);
+                        if (widget.onNavigateTab != null) widget.onNavigateTab!(1, subTabIndex: 2, openAddModal: false);
                       },
                     ),
                   ],
@@ -636,7 +712,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 24),
 
-              // 6. Recent Activity / Scan Log (Connected to scan logs)
+              // 6. Recent Activity / Scan Log (Explained purpose empty state)
               Text(
                 'RECENT FIELD SCANS',
                 style: TextStyle(
@@ -660,7 +736,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Icon(Icons.qr_code_scanner_outlined, color: Color(0xFF94A3B8), size: 24),
                           SizedBox(width: 12),
-                          Text('No field scans yet', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'No field scans yet',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF334155)),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'This shows when someone scans your emergency QR — you\'ll be notified instantly.',
+                                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       )
                     : Row(
@@ -714,194 +805,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Icon(icon, color: const Color(0xFF0D9488), size: 22),
             ),
             const SizedBox(height: 6),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+            SizedBox(
+              width: 72,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+              ),
             ),
           ],
         ),
       ),
     );
   }
-
-
-
-  void _showAddMedicationSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const AddMedicationBottomSheet(),
-    );
-  }
 }
 
-class AddMedicationBottomSheet extends StatefulWidget {
-  const AddMedicationBottomSheet({super.key});
 
-  @override
-  State<AddMedicationBottomSheet> createState() => _AddMedicationBottomSheetState();
-}
-
-class _AddMedicationBottomSheetState extends State<AddMedicationBottomSheet> {
-  final _drugController = TextEditingController();
-  final _doseController = TextEditingController(text: "500mg");
-  String _frequency = "Twice Daily";
-
-  void _submitAndCheckInteractions() {
-    final drugName = _drugController.text.trim().toLowerCase();
-    
-    // Simulate interaction check with Penicillin allergy
-    if (drugName.contains('amoxicillin') || drugName.contains('penicillin') || drugName.contains('ampicillin')) {
-      Navigator.pop(context); // Close bottom sheet
-      _showConflictRedAlertModal(context, drugName);
-    } else {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Medication ${_drugController.text} added & verified safe!')),
-      );
-    }
-  }
-
-  void _showConflictRedAlertModal(BuildContext context, String drugName) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: const Color(0xFF991B1B),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.gpp_maybe_rounded, color: Color(0xFF991B1B), size: 48),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                '⚠️ CRITICAL INTERACTION DETECTED',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'This medication conflicts with your verified Penicillin allergy!\n\n'
-                'Do NOT take Penicillin-class drugs as it may trigger severe anaphylactic reactions.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.red.shade100, fontSize: 13, height: 1.4),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.white),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF991B1B),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('I Understand'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text('Add New Medication', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 20),
-          
-          TextFormField(
-            controller: _drugController,
-            decoration: const InputDecoration(
-              labelText: 'Drug Name',
-              hintText: 'e.g. Amoxicillin or Metformin',
-              prefixIcon: Icon(Icons.medication_outlined),
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _doseController,
-                  decoration: const InputDecoration(
-                    labelText: 'Dose',
-                    prefixIcon: Icon(Icons.pin_outlined),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: _frequency,
-                  decoration: const InputDecoration(
-                    labelText: 'Frequency',
-                  ),
-                  items: ['Once Daily', 'Twice Daily', 'Thrice Daily', 'As Needed']
-                      .map((f) => DropdownMenuItem(value: f, child: Text(f, style: const TextStyle(fontSize: 13))))
-                      .toList(),
-                  onChanged: (val) => setState(() => _frequency = val!),
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          ElevatedButton(
-            onPressed: _submitAndCheckInteractions,
-            child: const Text('Add & Check Interactions'),
-          ),
-        ],
-      ),
-    );
-  }
-}

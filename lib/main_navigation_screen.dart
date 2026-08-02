@@ -6,7 +6,14 @@ import 'screens/settings_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final int initialIndex;
-  const MainNavigationScreen({super.key, this.initialIndex = 0});
+  final int initialSubIndex;
+  final bool autoOpenModal;
+  const MainNavigationScreen({
+    super.key,
+    this.initialIndex = 0,
+    this.initialSubIndex = 0,
+    this.autoOpenModal = false,
+  });
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -14,17 +21,30 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   late int _currentIndex;
+  int _healthSubIndex = 0;
+  bool _autoOpenHealthModal = false;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    _healthSubIndex = widget.initialSubIndex;
+    _autoOpenHealthModal = widget.autoOpenModal;
   }
 
-  void _onTabTapped(int index) {
+  void _onNavigateTab(int index, {int subTabIndex = 0, bool openAddModal = false}) {
     setState(() {
       _currentIndex = index;
+      if (index == 1) {
+        _healthSubIndex = subTabIndex;
+        _autoOpenHealthModal = openAddModal;
+      }
     });
+    if (openAddModal) {
+      Future.microtask(() {
+        if (mounted) setState(() => _autoOpenHealthModal = false);
+      });
+    }
   }
 
   @override
@@ -32,17 +52,30 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final theme = Theme.of(context);
 
     final List<Widget> screens = [
-      DashboardScreen(onNavigateTab: _onTabTapped),
-      const HealthHubScreen(),
+      DashboardScreen(onNavigateTab: _onNavigateTab),
+      HealthHubScreen(
+        key: ValueKey('health-hub-$_healthSubIndex-$_autoOpenHealthModal-${DateTime.now().millisecondsSinceEpoch}'),
+        initialSubTabIndex: _healthSubIndex,
+        autoOpenAdd: _autoOpenHealthModal,
+      ),
       const MyCardScreen(),
       const SettingsScreen(),
     ];
 
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: screens,
-      ),
+    return PopScope(
+      canPop: _currentIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _currentIndex != 0) {
+          setState(() {
+            _currentIndex = 0;
+          });
+        }
+      },
+      child: Scaffold(
+        body: IndexedStack(
+          index: _currentIndex,
+          children: screens,
+        ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -50,7 +83,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          onTap: _onTabTapped,
+          onTap: (idx) => _onNavigateTab(idx),
           backgroundColor: Colors.white,
           elevation: 0,
           type: BottomNavigationBarType.fixed,
@@ -82,6 +115,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }

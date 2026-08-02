@@ -43,8 +43,14 @@ class _LoginScreenState extends State<LoginScreen> {
     final phone = _phoneController.text.trim();
 
     try {
-      await _apiService.sendOtp(phone);
+      final res = await _apiService.sendOtp(phone);
       if (mounted) {
+        final devOtp = res['otp'];
+        if (devOtp != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('OTP sent! Dev Code: $devOtp'), duration: const Duration(seconds: 5)),
+          );
+        }
         Navigator.push(
           context,
           MaterialPageRoute(

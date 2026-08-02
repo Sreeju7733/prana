@@ -21,7 +21,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _dobController = TextEditingController();
   String _selectedGender = 'M';
   String _selectedBloodGroup = 'O+';
-  final List<String> _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+  final List<String> _bloodGroups = [
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'AB+',
+    'AB-',
+    'O+',
+    'O-'
+  ];
 
   // Step 2: Critical Allergies
   bool _hasKnownAllergies = false;
@@ -72,9 +81,102 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ];
 
   // Step 3: Medications
+  bool _takesMedications = false;
   final _medNameController = TextEditingController();
-  final _medDoseController = TextEditingController();
+  final _medDoseValueController = TextEditingController();
+  String _selectedDoseUnit = 'mg';
+  String _selectedFrequency = 'Twice daily';
+  final _medReasonController = TextEditingController();
+  int? _editingMedicationIndex;
   final List<Map<String, String>> _medicationsList = [];
+
+  final List<String> _doseUnits = [
+    'mg',
+    'mcg',
+    'g',
+    'mL',
+    'IU',
+    'Tablet(s)',
+    'Capsule(s)',
+    'Puff(s)',
+    'Drop(s)',
+    'Other',
+  ];
+
+  final List<String> _frequencies = [
+    'Once daily',
+    'Twice daily',
+    'Three times daily',
+    'Every morning',
+    'Every night',
+    'As needed (PRN)',
+    'Weekly',
+    'Monthly',
+    'Other...',
+  ];
+
+  final List<String> _suggestedMedications = [
+    'Metformin',
+    'Paracetamol',
+    'Aspirin',
+    'Insulin',
+    'Levothyroxine',
+    'Amlodipine',
+    'Losartan',
+    'Atorvastatin',
+    'Omeprazole',
+    'Salbutamol Inhaler',
+  ];
+
+  void _saveOrAddMedication() {
+    final name = _medNameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a medication name')),
+      );
+      return;
+    }
+
+    final doseVal = _medDoseValueController.text.trim();
+    final doseCombined =
+        doseVal.isNotEmpty ? '$doseVal $_selectedDoseUnit' : _selectedDoseUnit;
+
+    if (_editingMedicationIndex == null &&
+        _medicationsList.any((m) =>
+            m['name']?.toLowerCase() == name.toLowerCase() &&
+            m['dose'] == doseCombined)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content:
+                Text('Medication "$name" ($doseCombined) is already added.')),
+      );
+      return;
+    }
+
+    final medData = {
+      'name': name,
+      'dose_value': doseVal,
+      'dose_unit': _selectedDoseUnit,
+      'dose': doseCombined,
+      'frequency': _selectedFrequency,
+      'reason': _medReasonController.text.trim(),
+    };
+
+    setState(() {
+      if (_editingMedicationIndex != null &&
+          _editingMedicationIndex! < _medicationsList.length) {
+        _medicationsList[_editingMedicationIndex!] = medData;
+        _editingMedicationIndex = null;
+      } else {
+        _medicationsList.add(medData);
+      }
+      _medNameController.clear();
+      _medDoseValueController.clear();
+      _medReasonController.clear();
+      _selectedDoseUnit = 'mg';
+      _selectedFrequency = 'Twice daily';
+    });
+  }
 
   // Step 4: Emergency Contact
   final _contactNameController = TextEditingController();
@@ -89,10 +191,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
         return;
       }
-    } else if (_currentStep == 3) {
-      if (_contactNameController.text.trim().isEmpty || _contactPhoneController.text.trim().length != 10) {
+    } else if (_currentStep == 1) {
+      if (_hasKnownAllergies && _allergiesList.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter a valid emergency contact name and 10-digit phone number')),
+          const SnackBar(
+            content: Text('Please add at least one allergy or select "No Known Allergies"'),
+          ),
+        );
+        return;
+      }
+    } else if (_currentStep == 2) {
+      if (_takesMedications && _medicationsList.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please add at least one medication or select "I don\'t take any medications"'),
+          ),
+        );
+        return;
+      }
+    } else if (_currentStep == 3) {
+      if (_contactNameController.text.trim().isEmpty ||
+          _contactPhoneController.text.trim().length != 10) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid emergency contact name and 10-digit phone number'),
+          ),
         );
         return;
       }
@@ -131,7 +254,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     };
 
     setState(() {
-      if (_editingAllergyIndex != null && _editingAllergyIndex! < _allergiesList.length) {
+      if (_editingAllergyIndex != null &&
+          _editingAllergyIndex! < _allergiesList.length) {
         _allergiesList[_editingAllergyIndex!] = allergyData;
         _editingAllergyIndex = null;
       } else {
@@ -150,7 +274,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await _apiService.updateProfile(
         fullName: _nameController.text.trim(),
         gender: _selectedGender,
-        dateOfBirth: _dobController.text.isNotEmpty ? _dobController.text.trim() : null,
+        dateOfBirth:
+            _dobController.text.isNotEmpty ? _dobController.text.trim() : null,
         bloodGroup: _selectedBloodGroup,
       );
 
@@ -161,19 +286,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
           await _apiService.addAllergy({
             'allergen': a['name'] ?? '',
             'severity': severityLower,
-            'reaction_description': a['reaction']?.isNotEmpty == true ? a['reaction'] : null,
+            'reaction_description':
+                a['reaction']?.isNotEmpty == true ? a['reaction'] : null,
             'is_critical': severityLower == 'severe',
           }).catchError((_) => <String, dynamic>{});
         }
       }
 
       // 3. Post Medications
-      for (var m in _medicationsList) {
-        await _apiService.addMedication({
-          'name': m['name'],
-          'dose': m['dose'],
-          'frequency': 'Daily',
-          'is_active': true,
+      if (_takesMedications) {
+        // Auto-save pending medication text input if user forgot to click Add Medication button
+        final pendingName = _medNameController.text.trim();
+        if (pendingName.isNotEmpty) {
+          final doseVal = _medDoseValueController.text.trim();
+          final doseCombined = doseVal.isNotEmpty ? '$doseVal $_selectedDoseUnit' : _selectedDoseUnit;
+          if (!_medicationsList.any((m) => m['name']?.toLowerCase() == pendingName.toLowerCase())) {
+            _medicationsList.add({
+              'name': pendingName,
+              'dose_value': doseVal,
+              'dose_unit': _selectedDoseUnit,
+              'dose': doseCombined,
+              'frequency': _selectedFrequency,
+              'reason': _medReasonController.text.trim(),
+            });
+          }
+        }
+
+        for (var m in _medicationsList) {
+          final doseStr = (m['dose'] != null && m['dose'].toString().trim().isNotEmpty)
+              ? m['dose'].toString().trim()
+              : (m['dose_value'] != null && m['dose_value'].toString().trim().isNotEmpty)
+                  ? '${m['dose_value']} ${m['dose_unit'] ?? 'mg'}'
+                  : 'As prescribed';
+
+          await _apiService.addMedication({
+            'name': m['name'],
+            'dose': doseStr,
+            'dose_value': m['dose_value'],
+            'dose_unit': m['dose_unit'],
+            'frequency': m['frequency'] ?? 'Daily',
+            'reason': m['reason']?.isNotEmpty == true ? m['reason'] : null,
+            'is_active': true,
+          }).catchError((_) => <String, dynamic>{});
+        }
+      }
+
+      // 4. Post Primary Emergency Contact
+      if (_contactNameController.text.trim().isNotEmpty && _contactPhoneController.text.trim().isNotEmpty) {
+        await _apiService.addEmergencyContact({
+          'name': _contactNameController.text.trim(),
+          'relationship': _contactRelationship,
+          'phone': _contactPhoneController.text.trim(),
+          'is_primary': true,
         }).catchError((_) => <String, dynamic>{});
       }
 
@@ -203,12 +367,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text('Step ${_currentStep + 1} of $totalSteps', style: const TextStyle(color: Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Text('Step ${_currentStep + 1} of $totalSteps',
+            style: const TextStyle(
+                color: Color(0xFF0F172A),
+                fontSize: 16,
+                fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: _currentStep > 0
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 18),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                    color: Color(0xFF0F172A), size: 18),
                 onPressed: _prevStep,
               )
             : null,
@@ -270,40 +439,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            // Bottom Navigation Controls
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Row(
-                children: [
-                  if (_currentStep == 2)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 12.0),
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
-                          onPressed: _nextStep,
-                          child: const Text('Skip for now', style: TextStyle(color: Color(0xFF64748B))),
-                        ),
-                      ),
+            // Sticky Bottom Navigation Control (Only for Step 1 & Step 4)
+            if (_currentStep == 0 || _currentStep == 3)
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
                     ),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      onPressed: _isLoading ? null : _nextStep,
-                      child: _isLoading
-                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : Text(_currentStep == 3 ? 'Complete Setup 🎉' : 'Continue'),
-                    ),
+                    onPressed: _isLoading ? null : _nextStep,
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : Text(_currentStep == 3 ? 'Complete Setup 🎉' : 'Continue',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
-                ],
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -338,7 +497,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (picked != null) {
-      final formatted = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+      final formatted =
+          "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
       setState(() {
         _dobController.text = formatted;
       });
@@ -352,9 +512,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Basic Medical Info', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+          const Text('Basic Medical Info',
+              style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A))),
           const SizedBox(height: 6),
-          const Text('Your blood group is the #1 scanned field by paramedics.', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+          const Text('Your blood group is the #1 scanned field by paramedics.',
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
           const SizedBox(height: 24),
 
           // Full Name
@@ -390,10 +555,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Gender'),
                   items: const [
-                    DropdownMenuItem(value: 'M', child: Text('Male', overflow: TextOverflow.ellipsis)),
-                    DropdownMenuItem(value: 'F', child: Text('Female', overflow: TextOverflow.ellipsis)),
-                    DropdownMenuItem(value: 'Other', child: Text('Other', overflow: TextOverflow.ellipsis)),
-                    DropdownMenuItem(value: 'Prefer not to say', child: Text('Prefer not to say', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(
+                        value: 'M',
+                        child: Text('Male', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(
+                        value: 'F',
+                        child: Text('Female', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(
+                        value: 'Other',
+                        child: Text('Other', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(
+                        value: 'Prefer not to say',
+                        child: Text('Prefer not to say',
+                            overflow: TextOverflow.ellipsis)),
                   ],
                   onChanged: (val) => setState(() => _selectedGender = val!),
                 ),
@@ -403,7 +577,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 28),
 
           // Blood Group 8-Chip Grid
-          const Text('Select Blood Group', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+          const Text('Select Blood Group',
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A))),
           const SizedBox(height: 12),
           GridView.builder(
             shrinkWrap: true,
@@ -426,11 +604,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     color: isSelected ? const Color(0xFFEF4444) : Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isSelected ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0),
+                      color: isSelected
+                          ? const Color(0xFFDC2626)
+                          : const Color(0xFFE2E8F0),
                       width: isSelected ? 2 : 1,
                     ),
                     boxShadow: isSelected
-                        ? [BoxShadow(color: const Color(0xFFEF4444).withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))]
+                        ? [
+                            BoxShadow(
+                                color: const Color(0xFFEF4444)
+                                    .withValues(alpha: 0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4))
+                          ]
                         : [],
                   ),
                   child: Center(
@@ -439,7 +625,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
-                        color: isSelected ? Colors.white : const Color(0xFF0F172A),
+                        color:
+                            isSelected ? Colors.white : const Color(0xFF0F172A),
                       ),
                     ),
                   ),
@@ -454,21 +641,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // --- STEP 2: CRITICAL ALLERGIES ---
   Widget _buildStep2CriticalAllergies() {
+    final theme = Theme.of(context);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: 12),
           const Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+              Icon(Icons.shield_outlined, color: Color(0xFF0F172A), size: 28),
               SizedBox(width: 8),
-              Text('Critical Allergies', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+              Text('Critical Allergies',
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A))),
             ],
           ),
           const SizedBox(height: 6),
-          const Text('Flag any severe reactions (Penicillin, Peanuts, Latex, etc.)', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
-          const SizedBox(height: 20),
+          const Text(
+              'Flag any severe reactions (Penicillin, Peanuts, Latex, etc.)',
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+          const SizedBox(height: 24),
 
           // Selection Radio Toggle Cards: No Known Allergies vs I Have Allergies
           Row(
@@ -476,28 +672,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: GestureDetector(
                   onTap: () => setState(() => _hasKnownAllergies = false),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 12),
                     decoration: BoxDecoration(
-                      color: !_hasKnownAllergies ? const Color(0xFFF0FDF4) : Colors.white,
+                      color: !_hasKnownAllergies
+                          ? const Color(0xFFF0FDF4)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: !_hasKnownAllergies ? const Color(0xFF22C55E) : const Color(0xFFE2E8F0),
+                        color: !_hasKnownAllergies
+                            ? const Color(0xFF22C55E)
+                            : const Color(0xFFE2E8F0),
                         width: !_hasKnownAllergies ? 2 : 1,
                       ),
                     ),
                     child: Row(
                       children: [
                         Icon(
-                          !_hasKnownAllergies ? Icons.radio_button_checked : Icons.radio_button_off,
-                          color: !_hasKnownAllergies ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
+                          !_hasKnownAllergies
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_off,
+                          color: !_hasKnownAllergies
+                              ? const Color(0xFF16A34A)
+                              : const Color(0xFF94A3B8),
                           size: 20,
                         ),
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text(
                             'No Known Allergies',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: Color(0xFF0F172A)),
                           ),
                         ),
                       ],
@@ -509,28 +718,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: GestureDetector(
                   onTap: () => setState(() => _hasKnownAllergies = true),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 12),
                     decoration: BoxDecoration(
-                      color: _hasKnownAllergies ? const Color(0xFFFEF2F2) : Colors.white,
+                      color: _hasKnownAllergies
+                          ? theme.primaryColor.withValues(alpha: 0.08)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: _hasKnownAllergies ? const Color(0xFFEF4444) : const Color(0xFFE2E8F0),
+                        color: _hasKnownAllergies
+                            ? theme.primaryColor
+                            : const Color(0xFFE2E8F0),
                         width: _hasKnownAllergies ? 2 : 1,
                       ),
                     ),
                     child: Row(
                       children: [
                         Icon(
-                          _hasKnownAllergies ? Icons.radio_button_checked : Icons.radio_button_off,
-                          color: _hasKnownAllergies ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
+                          _hasKnownAllergies
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_off,
+                          color: _hasKnownAllergies
+                              ? theme.primaryColor
+                              : const Color(0xFF94A3B8),
                           size: 20,
                         ),
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text(
                             'I Have Allergies',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: Color(0xFF0F172A)),
                           ),
                         ),
                       ],
@@ -541,7 +763,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
 
-          // If "No Known Allergies" is selected
+          // -------------------------------------------------------------
+          // STATE 1: If "No Known Allergies" is selected -> HIDE FORM ENTIRELY
+          // -------------------------------------------------------------
           if (!_hasKnownAllergies) ...[
             const SizedBox(height: 32),
             Container(
@@ -559,7 +783,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Text(
                       'No known allergies recorded.',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF15803D),
                       ),
@@ -569,11 +793,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ] else ...[
-            // If "I Have Allergies" is selected
+            // -------------------------------------------------------------
+            // STATE 2: If "I Have Allergies" is selected -> SHOW INPUT FORM
+            // -------------------------------------------------------------
             const SizedBox(height: 24),
             const Text(
               'Common quick-add chips',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF64748B)),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -581,10 +810,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               runSpacing: 8,
               children: _quickAddAllergies.map((allergy) {
                 return ActionChip(
-                  avatar: const Text('+', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
-                  label: Text(allergy, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  avatar: Text('+',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: theme.primaryColor)),
+                  label: Text(allergy,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 13)),
                   backgroundColor: Colors.white,
-                  side: const BorderSide(color: Color(0xFFCBD5E1)),
+                  side: BorderSide(
+                      color: theme.primaryColor.withValues(alpha: 0.3)),
                   onPressed: () {
                     setState(() {
                       _allergyController.text = allergy;
@@ -595,37 +830,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
 
             const SizedBox(height: 20),
-            const Text('Allergy Name', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+            const Text('Allergy Name',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A))),
             const SizedBox(height: 6),
             TextFormField(
               controller: _allergyController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'e.g. Penicillin or Peanuts',
-                prefixIcon: Icon(Icons.shield_outlined, color: Colors.red),
+                prefixIcon:
+                    Icon(Icons.shield_outlined, color: theme.primaryColor),
                 filled: true,
                 fillColor: Colors.white,
               ),
               onChanged: (_) => setState(() {}),
             ),
 
-            // Autocomplete / Suggestions list when typing
+            // Autocomplete Suggestions
             if (_allergyController.text.isNotEmpty &&
-                _commonAllergies.any((a) => a.toLowerCase().startsWith(_allergyController.text.toLowerCase()) && a.toLowerCase() != _allergyController.text.toLowerCase())) ...[
+                _commonAllergies.any((a) =>
+                    a
+                        .toLowerCase()
+                        .startsWith(_allergyController.text.toLowerCase()) &&
+                    a.toLowerCase() !=
+                        _allergyController.text.toLowerCase())) ...[
               const SizedBox(height: 6),
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: const Color(0xFFE2E8F0)),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 4))],
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4))
+                  ],
                 ),
                 child: Column(
                   children: _commonAllergies
-                      .where((a) => a.toLowerCase().startsWith(_allergyController.text.toLowerCase()) && a.toLowerCase() != _allergyController.text.toLowerCase())
+                      .where((a) =>
+                          a.toLowerCase().startsWith(
+                              _allergyController.text.toLowerCase()) &&
+                          a.toLowerCase() !=
+                              _allergyController.text.toLowerCase())
                       .take(4)
                       .map((suggestion) => ListTile(
                             dense: true,
-                            title: Text(suggestion, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            title: Text(suggestion,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 13)),
                             onTap: () {
                               setState(() {
                                 _allergyController.text = suggestion;
@@ -638,7 +894,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
 
             const SizedBox(height: 16),
-            const Text('Reaction (Optional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+            const Text('Reaction (Optional)',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A))),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               initialValue: _selectedReaction,
@@ -647,34 +907,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 hintText: 'Rash, Swelling, Anaphylaxis...',
                 filled: true,
                 fillColor: Colors.white,
-                prefixIcon: Icon(Icons.medical_information_outlined, color: Color(0xFF64748B)),
+                prefixIcon: Icon(Icons.medical_information_outlined,
+                    color: Color(0xFF64748B)),
               ),
               items: [
-                const DropdownMenuItem(value: '', child: Text('None / Unspecified', style: TextStyle(color: Colors.grey))),
-                ..._commonReactions.map((r) => DropdownMenuItem(value: r, child: Text(r, overflow: TextOverflow.ellipsis))),
+                const DropdownMenuItem(
+                    value: '',
+                    child: Text('None / Unspecified',
+                        style: TextStyle(color: Colors.grey))),
+                ..._commonReactions.map((r) => DropdownMenuItem(
+                    value: r, child: Text(r, overflow: TextOverflow.ellipsis))),
               ],
               onChanged: (val) => setState(() => _selectedReaction = val ?? ''),
             ),
 
             const SizedBox(height: 20),
-            const Text('Severity', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+            const Text('Severity',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A))),
             const SizedBox(height: 10),
 
-            // 3-Level Severity Selector Cards
+            // 3-Level Severity Selector Cards (Yellow -> Orange -> Red)
             Row(
               children: [
-                // 🟢 Mild
+                // 🟡 Mild (Amber/Yellow)
                 Expanded(
                   child: GestureDetector(
                     onTap: () => setState(() => _allergySeverity = 'Mild'),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 8),
                       decoration: BoxDecoration(
-                        color: _allergySeverity == 'Mild' ? const Color(0xFFDCFCE7) : Colors.white,
+                        color: _allergySeverity == 'Mild'
+                            ? const Color(0xFFFEF3C7)
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: _allergySeverity == 'Mild' ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+                          color: _allergySeverity == 'Mild'
+                              ? const Color(0xFFF59E0B)
+                              : const Color(0xFFE2E8F0),
                           width: _allergySeverity == 'Mild' ? 2 : 1,
                         ),
                       ),
@@ -683,15 +957,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           Row(
                             children: [
-                              Text('🟢', style: TextStyle(fontSize: 14)),
+                              Text('🟡', style: TextStyle(fontSize: 14)),
                               SizedBox(width: 4),
-                              Text('Mild', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF166534))),
+                              Text('Mild',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: Color(0xFFB45309))),
                             ],
                           ),
                           SizedBox(height: 6),
                           Text(
                             '• Sneezing\n• Itchy eyes\n• Mild rash',
-                            style: TextStyle(fontSize: 10, color: Color(0xFF475569), height: 1.3),
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF475569),
+                                height: 1.3),
                           ),
                         ],
                       ),
@@ -700,18 +981,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(width: 8),
 
-                // 🟠 Moderate
+                // 🟠 Moderate (Orange)
                 Expanded(
                   child: GestureDetector(
                     onTap: () => setState(() => _allergySeverity = 'Moderate'),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 8),
                       decoration: BoxDecoration(
-                        color: _allergySeverity == 'Moderate' ? const Color(0xFFFFEDD5) : Colors.white,
+                        color: _allergySeverity == 'Moderate'
+                            ? const Color(0xFFFFEDD5)
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: _allergySeverity == 'Moderate' ? const Color(0xFFEA580C) : const Color(0xFFE2E8F0),
+                          color: _allergySeverity == 'Moderate'
+                              ? const Color(0xFFEA580C)
+                              : const Color(0xFFE2E8F0),
                           width: _allergySeverity == 'Moderate' ? 2 : 1,
                         ),
                       ),
@@ -722,13 +1008,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               Text('🟠', style: TextStyle(fontSize: 14)),
                               SizedBox(width: 4),
-                              Text('Moderate', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF9A3412))),
+                              Text('Moderate',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: Color(0xFF9A3412))),
                             ],
                           ),
                           SizedBox(height: 6),
                           Text(
                             '• Hives\n• Vomiting\n• Swelling',
-                            style: TextStyle(fontSize: 10, color: Color(0xFF475569), height: 1.3),
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF475569),
+                                height: 1.3),
                           ),
                         ],
                       ),
@@ -737,18 +1030,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(width: 8),
 
-                // 🔴 Severe
+                // 🔴 Severe (Red)
                 Expanded(
                   child: GestureDetector(
                     onTap: () => setState(() => _allergySeverity = 'Severe'),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 8),
                       decoration: BoxDecoration(
-                        color: _allergySeverity == 'Severe' ? const Color(0xFFFEE2E2) : Colors.white,
+                        color: _allergySeverity == 'Severe'
+                            ? const Color(0xFFFEF2F2)
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: _allergySeverity == 'Severe' ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0),
+                          color: _allergySeverity == 'Severe'
+                              ? const Color(0xFFDC2626)
+                              : const Color(0xFFE2E8F0),
                           width: _allergySeverity == 'Severe' ? 2 : 1,
                         ),
                       ),
@@ -759,13 +1057,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               Text('🔴', style: TextStyle(fontSize: 14)),
                               SizedBox(width: 4),
-                              Text('Severe', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF991B1B))),
+                              Text('Severe',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: Color(0xFF991B1B))),
                             ],
                           ),
                           SizedBox(height: 6),
                           Text(
                             '• Breathing issue\n• Anaphylaxis\n• Unconscious',
-                            style: TextStyle(fontSize: 10, color: Color(0xFF475569), height: 1.3),
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF475569),
+                                height: 1.3),
                           ),
                         ],
                       ),
@@ -776,25 +1081,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
 
             const SizedBox(height: 20),
+            // Outlined Secondary Action for "Add Allergy" (Single plus icon)
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _editingAllergyIndex != null ? const Color(0xFF0284C7) : const Color(0xFFDC2626),
-                  foregroundColor: Colors.white,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: theme.primaryColor, width: 1.5),
+                  foregroundColor: theme.primaryColor,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
                 ),
                 onPressed: _saveOrAddAllergy,
-                icon: Icon(_editingAllergyIndex != null ? Icons.check : Icons.add),
-                label: Text(_editingAllergyIndex != null ? 'Update Allergy' : '+ Add Allergy', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                icon: Icon(
+                    _editingAllergyIndex != null ? Icons.check : Icons.add,
+                    color: theme.primaryColor),
+                label: Text(
+                  _editingAllergyIndex != null
+                      ? 'Update Allergy Entry'
+                      : 'Add Allergy',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: theme.primaryColor),
+                ),
               ),
             ),
 
-            // Added Allergy Cards with Edit & Delete Actions
+            // Added Allergies List with Edit & Delete Actions
             if (_allergiesList.isNotEmpty) ...[
               const SizedBox(height: 28),
-              const Text('ADDED ALLERGIES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B), letterSpacing: 0.5)),
+              Row(
+                children: [
+                  const Text('ADDED ALLERGIES',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF64748B),
+                          letterSpacing: 0.5)),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                        color: theme.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10)),
+                    child: Text('${_allergiesList.length}',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: theme.primaryColor)),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               ..._allergiesList.asMap().entries.map((entry) {
                 final index = entry.key;
@@ -804,9 +1143,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 final isSevere = severity.toLowerCase() == 'severe';
                 final isModerate = severity.toLowerCase() == 'moderate';
 
-                final dotEmoji = isSevere ? '🔴' : (isModerate ? '🟠' : '🟢');
-                final cardBg = isSevere ? const Color(0xFFFEF2F2) : (isModerate ? const Color(0xFFFFF7ED) : const Color(0xFFF0FDF4));
-                final borderColor = isSevere ? const Color(0xFFFCA5A5) : (isModerate ? const Color(0xFFFDBA74) : const Color(0xFF86EFAC));
+                final dotEmoji = isSevere ? '🔴' : (isModerate ? '🟠' : '🟡');
+                final cardBg = isSevere
+                    ? const Color(0xFFFEF2F2)
+                    : (isModerate
+                        ? const Color(0xFFFFF7ED)
+                        : const Color(0xFFFEF3C7));
+                final borderColor = isSevere
+                    ? const Color(0xFFFCA5A5)
+                    : (isModerate
+                        ? const Color(0xFFFDBA74)
+                        : const Color(0xFFFCD34D));
 
                 final subtitleText = (reaction != null && reaction.isNotEmpty)
                     ? '$severity • $reaction'
@@ -830,24 +1177,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           children: [
                             Text(
                               a['name'] ?? '',
-                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF0F172A)),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                  color: Color(0xFF0F172A)),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               subtitleText,
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF475569)),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                  color: Color(0xFF475569)),
                             ),
                           ],
                         ),
                       ),
                       TextButton.icon(
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
-                        icon: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF0284C7)),
-                        label: const Text('Edit', style: TextStyle(fontSize: 12, color: Color(0xFF0284C7), fontWeight: FontWeight.bold)),
+                        icon: Icon(Icons.edit_outlined,
+                            size: 16, color: theme.primaryColor),
+                        label: Text('Edit',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: theme.primaryColor,
+                                fontWeight: FontWeight.bold)),
                         onPressed: () {
                           setState(() {
                             _editingAllergyIndex = index;
@@ -860,12 +1219,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(width: 4),
                       TextButton.icon(
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
-                        icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFEF4444)),
-                        label: const Text('Delete', style: TextStyle(fontSize: 12, color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+                        icon: const Icon(Icons.delete_outline_rounded,
+                            size: 16, color: Color(0xFFEF4444)),
+                        label: const Text('Delete',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFFEF4444),
+                                fontWeight: FontWeight.bold)),
                         onPressed: () {
                           setState(() {
                             _allergiesList.removeAt(index);
@@ -884,74 +1249,579 @@ class _ProfileScreenState extends State<ProfileScreen> {
               }),
             ],
           ],
+          // Non-sticky inline Continue button at bottom of Step 2 content
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              onPressed: (!_hasKnownAllergies || _allergiesList.isNotEmpty) && !_isLoading ? _nextStep : null,
+              child: _isLoading
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Continue', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  // --- STEP 3: MEDICATIONS (OPTIONAL) ---
+  // --- STEP 3: ACTIVE MEDICATIONS ---
   Widget _buildStep3Medications() {
+    final theme = Theme.of(context);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Active Medications', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+          const SizedBox(height: 12),
+          const Row(
+            children: [
+              Icon(Icons.medication_liquid_outlined,
+                  color: Color(0xFF0F172A), size: 28),
+              SizedBox(width: 8),
+              Text('Active Medications',
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A))),
+            ],
+          ),
           const SizedBox(height: 6),
-          const Text('Add prescriptions you take daily (Optional & Skippable)', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+          const Text(
+            'Add medicines you currently take.\nThis is optional and can be updated later.',
+            style:
+                TextStyle(color: Color(0xFF64748B), fontSize: 13, height: 1.4),
+          ),
           const SizedBox(height: 24),
 
+          // Initial Choice Toggle Cards
           Row(
             children: [
               Expanded(
-                child: TextFormField(
-                  controller: _medNameController,
-                  decoration: const InputDecoration(labelText: 'Medication Name', hintText: 'e.g. Metformin'),
+                child: GestureDetector(
+                  onTap: () => setState(() => _takesMedications = false),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: !_takesMedications
+                          ? const Color(0xFFF0FDF4)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: !_takesMedications
+                            ? const Color(0xFF22C55E)
+                            : const Color(0xFFE2E8F0),
+                        width: !_takesMedications ? 2 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          !_takesMedications
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_off,
+                          color: !_takesMedications
+                              ? const Color(0xFF16A34A)
+                              : const Color(0xFF94A3B8),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            "I don't take any medications",
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                color: Color(0xFF0F172A)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: TextFormField(
-                  controller: _medDoseController,
-                  decoration: const InputDecoration(labelText: 'Dose', hintText: '500mg'),
+                child: GestureDetector(
+                  onTap: () => setState(() => _takesMedications = true),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: _takesMedications
+                          ? theme.primaryColor.withValues(alpha: 0.08)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _takesMedications
+                            ? theme.primaryColor
+                            : const Color(0xFFE2E8F0),
+                        width: _takesMedications ? 2 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _takesMedications
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_off,
+                          color: _takesMedications
+                              ? theme.primaryColor
+                              : const Color(0xFF94A3B8),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'I take one or more medications',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                color: Color(0xFF0F172A)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          OutlinedButton.icon(
-            onPressed: () {
-              final name = _medNameController.text.trim();
-              if (name.isNotEmpty) {
-                setState(() {
-                  _medicationsList.add({'name': name, 'dose': _medDoseController.text.trim()});
-                  _medNameController.clear();
-                  _medDoseController.clear();
-                });
-              }
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Add Medication'),
-          ),
-          const SizedBox(height: 24),
 
-          if (_medicationsList.isNotEmpty) ...[
-            const Text('ADDED MEDICATIONS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-            const SizedBox(height: 12),
-            ..._medicationsList.map(
-              (m) => Card(
-                child: ListTile(
-                  leading: const Icon(Icons.medication_outlined, color: Color(0xFF0284C7)),
-                  title: Text(m['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(m['dose'] ?? ''),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.close, size: 18, color: Colors.red),
-                    onPressed: () => setState(() => _medicationsList.remove(m)),
+          // STATE 1: If "I don't take any medications" -> Show green banner
+          if (!_takesMedications) ...[
+            const SizedBox(height: 32),
+            Container(
+              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
+              ),
+              child: const Row(
+                children: [
+                  Text('✅ ', style: TextStyle(fontSize: 20)),
+                  Expanded(
+                    child: Text(
+                      'No active medications recorded.',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF15803D),
+                      ),
+                    ),
                   ),
+                ],
+              ),
+            ),
+          ] else ...[
+            // STATE 2: If "I take medications" -> Show Medication Form
+            const SizedBox(height: 24),
+
+            // Suggested Medications Quick Chips
+            const Text(
+              'Suggested Medications',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _suggestedMedications.map((med) {
+                return ActionChip(
+                  avatar: Text('+',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: theme.primaryColor)),
+                  label: Text(med,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 13)),
+                  backgroundColor: Colors.white,
+                  side: BorderSide(
+                      color: theme.primaryColor.withValues(alpha: 0.3)),
+                  onPressed: () {
+                    setState(() {
+                      _medNameController.text = med;
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+
+            const SizedBox(height: 20),
+            const Text('Medication Name',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A))),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _medNameController,
+              decoration: InputDecoration(
+                hintText: 'Search medicines...',
+                prefixIcon:
+                    Icon(Icons.search_rounded, color: theme.primaryColor),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+
+            // Autocomplete dropdown suggestions
+            if (_medNameController.text.isNotEmpty &&
+                _suggestedMedications.any((m) =>
+                    m
+                        .toLowerCase()
+                        .startsWith(_medNameController.text.toLowerCase()) &&
+                    m.toLowerCase() !=
+                        _medNameController.text.toLowerCase())) ...[
+              const SizedBox(height: 6),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4))
+                  ],
+                ),
+                child: Column(
+                  children: _suggestedMedications
+                      .where((m) =>
+                          m.toLowerCase().startsWith(
+                              _medNameController.text.toLowerCase()) &&
+                          m.toLowerCase() !=
+                              _medNameController.text.toLowerCase())
+                      .take(4)
+                      .map((suggestion) => ListTile(
+                            dense: true,
+                            title: Text(suggestion,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 13)),
+                            onTap: () {
+                              setState(() {
+                                _medNameController.text = suggestion;
+                              });
+                            },
+                          ))
+                      .toList(),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 16),
+            // Split Dose Fields: [ Value ] [ Unit ▼ ]
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Dose',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A))),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _medDoseValueController,
+                        keyboardType: TextInputType.text,
+                        decoration: const InputDecoration(
+                          hintText: '500',
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Unit',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A))),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedDoseUnit,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        items: _doseUnits
+                            .map((u) => DropdownMenuItem(
+                                value: u,
+                                child:
+                                    Text(u, overflow: TextOverflow.ellipsis)))
+                            .toList(),
+                        onChanged: (val) =>
+                            setState(() => _selectedDoseUnit = val ?? 'mg'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+            const Text('Frequency',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A))),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedFrequency,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                prefixIcon:
+                    Icon(Icons.access_time_rounded, color: Color(0xFF64748B)),
+              ),
+              items: _frequencies
+                  .map((f) => DropdownMenuItem(
+                      value: f,
+                      child: Text(f, overflow: TextOverflow.ellipsis)))
+                  .toList(),
+              onChanged: (val) =>
+                  setState(() => _selectedFrequency = val ?? 'Twice daily'),
+            ),
+
+            const SizedBox(height: 16),
+            const Text('Reason (Optional)',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A))),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _medReasonController,
+              decoration: const InputDecoration(
+                hintText: 'e.g. Type 2 Diabetes',
+                filled: true,
+                fillColor: Colors.white,
+                prefixIcon:
+                    Icon(Icons.info_outline_rounded, color: Color(0xFF64748B)),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            // Outlined Secondary Action Button for Add/Update Medication
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: theme.primaryColor, width: 1.5),
+                  foregroundColor: theme.primaryColor,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: _saveOrAddMedication,
+                icon: Icon(
+                    _editingMedicationIndex != null ? Icons.check : Icons.add,
+                    color: theme.primaryColor),
+                label: Text(
+                  _editingMedicationIndex != null
+                      ? 'Update Medication Entry'
+                      : 'Add Medication',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: theme.primaryColor),
                 ),
               ),
             ),
+
+            // Added Medications List with Edit & Delete Actions
+            if (_medicationsList.isNotEmpty) ...[
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  const Text('YOUR MEDICATIONS',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF64748B),
+                          letterSpacing: 0.5)),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                        color: theme.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10)),
+                    child: Text('${_medicationsList.length}',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: theme.primaryColor)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ..._medicationsList.asMap().entries.map((entry) {
+                final index = entry.key;
+                final m = entry.value;
+                final name = m['name'] ?? '';
+                final dose = m['dose'] ?? '';
+                final freq = m['frequency'] ?? '';
+                final reason = m['reason'];
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2))
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('💊 ', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                  color: Color(0xFF0F172A)),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '$dose • $freq',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                  color: Color(0xFF475569)),
+                            ),
+                            if (reason != null && reason.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                'For: $reason',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 11,
+                                    color: theme.primaryColor),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        icon: Icon(Icons.edit_outlined,
+                            size: 16, color: theme.primaryColor),
+                        label: Text('Edit',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: theme.primaryColor,
+                                fontWeight: FontWeight.bold)),
+                        onPressed: () {
+                          setState(() {
+                            _editingMedicationIndex = index;
+                            _medNameController.text = m['name'] ?? '';
+                            _medDoseValueController.text =
+                                m['dose_value'] ?? '';
+                            _selectedDoseUnit = m['dose_unit'] ?? 'mg';
+                            _selectedFrequency =
+                                m['frequency'] ?? 'Twice daily';
+                            _medReasonController.text = m['reason'] ?? '';
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        icon: const Icon(Icons.delete_outline_rounded,
+                            size: 16, color: Color(0xFFEF4444)),
+                        label: const Text('Delete',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFFEF4444),
+                                fontWeight: FontWeight.bold)),
+                        onPressed: () {
+                          setState(() {
+                            _medicationsList.removeAt(index);
+                            if (_editingMedicationIndex == index) {
+                              _editingMedicationIndex = null;
+                              _medNameController.clear();
+                              _medDoseValueController.clear();
+                              _medReasonController.clear();
+                              _selectedDoseUnit = 'mg';
+                              _selectedFrequency = 'Twice daily';
+                            }
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
           ],
+
+          // Non-sticky inline Continue button at bottom of Step 3 content
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              onPressed: (!_takesMedications || _medicationsList.isNotEmpty) && !_isLoading ? _nextStep : null,
+              child: _isLoading
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Continue', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -964,11 +1834,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Emergency Contact', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+          const Text('Emergency Contact',
+              style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A))),
           const SizedBox(height: 6),
-          const Text('At least one primary emergency contact is required for PRANA Relay SMS alerts.', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+          const Text(
+              'At least one primary emergency contact is required for PRANA Relay SMS alerts.',
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
           const SizedBox(height: 24),
-
           TextFormField(
             controller: _contactNameController,
             decoration: const InputDecoration(
@@ -978,20 +1853,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
-
           DropdownButtonFormField<String>(
             initialValue: _contactRelationship,
             decoration: const InputDecoration(labelText: 'Relationship *'),
             items: const [
-              DropdownMenuItem(value: 'Spouse / Family', child: Text('Spouse / Family')),
+              DropdownMenuItem(
+                  value: 'Spouse / Family', child: Text('Spouse / Family')),
               DropdownMenuItem(value: 'Parent', child: Text('Parent')),
               DropdownMenuItem(value: 'Sibling', child: Text('Sibling')),
-              DropdownMenuItem(value: 'Friend / Other', child: Text('Friend / Other')),
+              DropdownMenuItem(
+                  value: 'Friend / Other', child: Text('Friend / Other')),
             ],
             onChanged: (val) => setState(() => _contactRelationship = val!),
           ),
           const SizedBox(height: 16),
-
           TextFormField(
             controller: _contactPhoneController,
             keyboardType: TextInputType.phone,

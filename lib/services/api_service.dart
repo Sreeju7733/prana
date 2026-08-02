@@ -243,10 +243,56 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> getVitals() async {
+  Future<Map<String, dynamic>> updateMedication(String id, Map<String, dynamic> data) async {
     final token = await StorageService().getToken();
+    final response = await http.patch(
+      Uri.parse('$baseUrl/api/medications/$id'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to update medication');
+    }
+  }
+
+  Future<Map<String, dynamic>> updateCondition(String id, Map<String, dynamic> data) async {
+    final token = await StorageService().getToken();
+    final response = await http.patch(
+      Uri.parse('$baseUrl/api/conditions/$id'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to update condition');
+    }
+  }
+
+  Future<void> deleteCondition(String id) async {
+    final token = await StorageService().getToken();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/conditions/$id'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete condition');
+    }
+  }
+
+  Future<List<dynamic>> getVitals({bool latestOnly = false}) async {
+    final token = await StorageService().getToken();
+    final url = latestOnly ? '$baseUrl/api/vitals?latest=true' : '$baseUrl/api/vitals';
     final response = await http.get(
-      Uri.parse('$baseUrl/api/vitals'),
+      Uri.parse(url),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {
@@ -255,6 +301,108 @@ class ApiService {
     } else {
       throw Exception('Failed to fetch vitals');
     }
+  }
+
+  // --- SURGERIES & PROCEDURES ---
+  Future<List<dynamic>> getSurgeries() async {
+    final token = await StorageService().getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/surgeries'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      final res = jsonDecode(response.body);
+      return res['data'] ?? [];
+    } else {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> addSurgery(Map<String, dynamic> data) async {
+    final token = await StorageService().getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/surgeries'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to add surgery');
+    }
+  }
+
+  Future<Map<String, dynamic>> updateSurgery(String id, Map<String, dynamic> data) async {
+    final token = await StorageService().getToken();
+    final response = await http.patch(
+      Uri.parse('$baseUrl/api/surgeries/$id'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to update surgery');
+    }
+  }
+
+  Future<void> deleteSurgery(String id) async {
+    final token = await StorageService().getToken();
+    await http.delete(
+      Uri.parse('$baseUrl/api/surgeries/$id'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+  }
+
+  // --- IMPLANTED DEVICES ---
+  Future<List<dynamic>> getDevices() async {
+    final token = await StorageService().getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/devices'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      final res = jsonDecode(response.body);
+      return res['data'] ?? [];
+    } else {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> addDevice(Map<String, dynamic> data) async {
+    final token = await StorageService().getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/devices'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to add device');
+    }
+  }
+
+  Future<Map<String, dynamic>> updateDevice(String id, Map<String, dynamic> data) async {
+    final token = await StorageService().getToken();
+    final response = await http.patch(
+      Uri.parse('$baseUrl/api/devices/$id'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to update device');
+    }
+  }
+
+  Future<void> deleteDevice(String id) async {
+    final token = await StorageService().getToken();
+    await http.delete(
+      Uri.parse('$baseUrl/api/devices/$id'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
   }
 
   Future<Map<String, dynamic>> logVital(Map<String, dynamic> data) async {
@@ -270,7 +418,36 @@ class ApiService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Failed to log vital');
+      final res = jsonDecode(response.body);
+      throw Exception(res['error'] ?? 'Failed to log vital');
+    }
+  }
+
+  Future<Map<String, dynamic>> updateVital(String id, Map<String, dynamic> data) async {
+    final token = await StorageService().getToken();
+    final response = await http.patch(
+      Uri.parse('$baseUrl/api/vitals/$id'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to update vital');
+    }
+  }
+
+  Future<void> deleteVital(String id) async {
+    final token = await StorageService().getToken();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/vitals/$id'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete vital');
     }
   }
 
@@ -339,6 +516,44 @@ class ApiService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to check drug interaction');
+    }
+  }
+
+  // --- EMERGENCY CONTACTS ---
+  Future<Map<String, dynamic>> addEmergencyContact(Map<String, dynamic> contactData) async {
+    final token = await StorageService().getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/emergency-contacts'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(contactData),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to add emergency contact');
+    }
+  }
+
+  Future<List<dynamic>> getEmergencyContacts() async {
+    final token = await StorageService().getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/emergency-contacts'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return (data['data'] as List<dynamic>?) ?? [];
+    } else {
+      return [];
     }
   }
 }
