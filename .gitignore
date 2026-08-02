@@ -10,7 +10,7 @@
 .svn/
 mime.cache
 
-# User-specific stuff
+# User-specific & IDE stuff
 .idea/
 .idea/workspace.xml
 .idea/tasks.xml
@@ -20,11 +20,9 @@ mime.cache
 *.iml
 *.ipr
 *.iws
-
-# Visual Studio Code
 .vscode/
 
-# Flutter/Dart specific
+# Flutter / Dart Specific
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
@@ -33,18 +31,24 @@ mime.cache
 .pub/
 /build/
 /ephemeral/
+*.mode1v3
+*.mode2v3
+*.moved-aside
+*.pbxuser
+*.perspectivev3
 
-# Android specific
+# Android Specific
 android/app/debug/
 android/app/release/
 android/app/profile/
-android/.gradle
+android/.gradle/
 android/captures/
 android/local.properties
 android/key.properties
 android/app/build/
+android/.idea/
 
-# iOS specific
+# iOS Specific
 ios/Runner/GeneratedPluginRegistrant.h
 ios/Runner/GeneratedPluginRegistrant.m
 ios/Flutter/App.framework
@@ -58,7 +62,10 @@ ios/ServiceDefinitions.json
 ios/Runner.xcodeproj/project.xcworkspace/
 ios/Runner.xcodeproj/xcuserdata/
 ios/Runner.xcworkspace/
+ios/Pods/
+ios/.symlinks/
 
 # Environment / Secrets
 .env
 .env.*
+!.env.example

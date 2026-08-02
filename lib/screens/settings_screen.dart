@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 import 'profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -9,6 +10,67 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  final ApiService _apiService = ApiService();
+  String _userName = 'Sreeju S';
+  String _bloodGroup = 'B+';
+  String _dob = '26/01/2007';
+  String _gender = 'Male';
+  String _weight = '68 kg';
+  String _height = '175 cm';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final dashboard = await _apiService.getDashboard(forceRefresh: true);
+      final profile = dashboard['profile'] as Map<String, dynamic>?;
+      if (profile != null && mounted) {
+        setState(() {
+          if (profile['full_name'] != null && profile['full_name'].toString().trim().isNotEmpty && profile['full_name'].toString().trim() != 'undefined') {
+            _userName = profile['full_name'].toString().trim();
+          } else {
+            _userName = 'Sreeju S';
+          }
+          if (profile['blood_group'] != null && profile['blood_group'].toString().trim().isNotEmpty && profile['blood_group'].toString().trim() != 'undefined') {
+            _bloodGroup = profile['blood_group'].toString().trim();
+          } else {
+            _bloodGroup = 'B+';
+          }
+          if (profile['date_of_birth'] != null && profile['date_of_birth'].toString().trim().isNotEmpty && profile['date_of_birth'].toString().trim() != 'undefined') {
+            final rawDob = profile['date_of_birth'].toString().trim().split('T').first;
+            final parts = rawDob.split('-');
+            if (parts.length == 3) {
+              _dob = '${parts[2]}/${parts[1]}/${parts[0]}';
+            } else {
+              _dob = rawDob;
+            }
+          } else {
+            _dob = '26/01/2007';
+          }
+          if (profile['gender'] != null && profile['gender'].toString().trim().isNotEmpty && profile['gender'].toString().trim() != 'undefined') {
+            final g = profile['gender'].toString().trim().toUpperCase();
+            _gender = g == 'M' ? 'Male' : (g == 'F' ? 'Female' : g);
+          } else {
+            _gender = 'Male';
+          }
+          if (profile['weight'] != null && profile['weight'].toString().trim().isNotEmpty && profile['weight'].toString().trim() != 'undefined') {
+            _weight = '${profile['weight']} kg';
+          } else {
+            _weight = '68 kg';
+          }
+          if (profile['height'] != null && profile['height'].toString().trim().isNotEmpty && profile['height'].toString().trim() != 'undefined') {
+            _height = '${profile['height']} cm';
+          } else {
+            _height = '175 cm';
+          }
+        });
+      }
+    } catch (_) {}
+  }
 
 
   void _showEmergencyDashboardModal() {
@@ -138,29 +200,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
-                    child: Icon(Icons.person, color: theme.primaryColor, size: 28),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('John Doe', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                        const Text('PRAN-7843-2910', style: TextStyle(fontFamily: 'monospace', color: Color(0xFF64748B), fontSize: 12)),
-                        const SizedBox(height: 4),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen()));
-                          },
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 26,
+                        backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
+                        child: Icon(Icons.person, color: theme.primaryColor, size: 28),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_userName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                            const SizedBox(height: 2),
+                            Text('$_gender • $_dob', style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen())).then((_) => _loadProfile());
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: theme.primaryColor.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                           child: Text('Edit Profile >', style: TextStyle(color: theme.primaryColor, fontWeight: FontWeight.bold, fontSize: 12)),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildProfileDetailItem('Blood Group', _bloodGroup, Icons.water_drop_outlined, Colors.red),
+                      _buildProfileDetailItem('Weight', _weight, Icons.monitor_weight_outlined, Colors.teal),
+                      _buildProfileDetailItem('Height', _height, Icons.height_outlined, Colors.indigo),
+                    ],
                   ),
                 ],
               ),
@@ -214,6 +299,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProfileDetailItem(String label, String value, IconData icon, Color color) {
+    return Column(
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+            Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+      ],
     );
   }
 }
