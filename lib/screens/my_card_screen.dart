@@ -36,49 +36,13 @@ class MyCardScreen extends StatefulWidget {
 
 class _MyCardScreenState extends State<MyCardScreen> {
   bool _cardActive = true;
-  final int _usedScansToday = 2;
-  final int _maxScansQuota = 10;
   String _pranaId = 'PRAN-2973CAC1';
   String _userName = 'Sreeju S';
   String _bloodGroup = 'B+';
   String _criticalAllergyText = 'No critical severe allergies logged';
   String _emergencyContact = 'Emergency Relay: Active';
 
-  final List<ScanHistoryItem> _scanHistory = const [
-    ScanHistoryItem(
-      id: 'SCAN-9021',
-      timeLabel: 'Today, 14:32',
-      location: 'Delhi, India',
-      scannerName: 'Public (Green tier)',
-      tier: 'Green Tier',
-      tierColor: Color(0xFF16A34A),
-      exactGps: '28.6139° N, 77.2090° E (Connaught Place, New Delhi)',
-      deviceInfo: 'Safari / iPhone 15 Pro (iOS 17.4)',
-      dataAccessed: 'Basic emergency contacts, Blood group, Severe Allergies',
-    ),
-    ScanHistoryItem(
-      id: 'SCAN-8842',
-      timeLabel: 'Yesterday, 18:45',
-      location: 'Mumbai, India',
-      scannerName: 'Paramedic EMD-4521 (Yellow tier)',
-      tier: 'Yellow Tier',
-      tierColor: Color(0xFFD97706),
-      exactGps: '19.0760° N, 72.8777° E (Bandra Kurla Complex, Mumbai)',
-      deviceInfo: 'PRANA Paramedic Terminal v2.4 (Android 14)',
-      dataAccessed: 'Full emergency profile, Active prescriptions, Emergency Contact Auto-Alert dispatched',
-    ),
-    ScanHistoryItem(
-      id: 'SCAN-7612',
-      timeLabel: '3 days ago, 09:12',
-      location: 'Bangalore, India',
-      scannerName: 'Public (Green tier)',
-      tier: 'Green Tier',
-      tierColor: Color(0xFF16A34A),
-      exactGps: '12.9716° N, 77.5946° E (MG Road, Bengaluru)',
-      deviceInfo: 'Chrome 122.0 / Samsung Galaxy S24 (Android 14)',
-      dataAccessed: 'Basic emergency contacts, Organ donor badge status',
-    ),
-  ];
+  List<ScanHistoryItem> _scanHistory = [];
 
   final ApiService _apiService = ApiService();
 
@@ -95,6 +59,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
       final allergies = await _apiService.getAllergies().catchError((_) => []);
       final contacts = await _apiService.getEmergencyContacts().catchError((_) => []);
       final securityData = await _apiService.getCardSecurity().catchError((_) => <String, dynamic>{});
+      final rawLogs = await _apiService.getScanHistory().catchError((_) => []);
 
       if (mounted) {
         setState(() {
@@ -131,6 +96,29 @@ class _MyCardScreenState extends State<MyCardScreen> {
           if (contacts.isNotEmpty) {
             final c = contacts.first;
             _emergencyContact = '${c['name'] ?? 'Emergency Contact'} • ${c['phone_number'] ?? c['phone'] ?? ''}';
+          }
+
+          if (rawLogs.isNotEmpty) {
+            _scanHistory = rawLogs.map((log) {
+              final String id = log['id']?.toString() ?? 'SCAN-${log['created_at'] ?? 'LOG'}';
+              final String timeLabel = log['scanned_at'] != null ? log['scanned_at'].toString().split('T').first : 'Recently';
+              final String location = log['location_city'] ?? log['location'] ?? 'India';
+              final String scannerName = log['responder_org'] ?? log['scanner_type'] ?? 'Public (Green tier)';
+              final String tier = log['access_tier'] ?? 'Green Tier';
+              final Color tierColor = tier.contains('Yellow') ? const Color(0xFFD97706) : const Color(0xFF16A34A);
+
+              return ScanHistoryItem(
+                id: id,
+                timeLabel: timeLabel,
+                location: location,
+                scannerName: scannerName,
+                tier: tier,
+                tierColor: tierColor,
+                exactGps: log['gps_coordinates'] ?? 'GPS Location verified by scanner',
+                deviceInfo: log['user_agent'] ?? log['device_info'] ?? 'PRANA Web/Mobile Scanner Engine',
+                dataAccessed: log['accessed_data_summary'] ?? 'Emergency Profile & Critical Allergies',
+              );
+            }).toList();
           }
         });
       }
@@ -189,15 +177,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
     }
   }
 
-  Color get _quotaProgressColor {
-    final ratio = _usedScansToday / _maxScansQuota;
-    if (ratio >= 1.0) {
-      return const Color(0xFFDC2626); // Red at 10/10
-    } else if (ratio >= 0.8) {
-      return const Color(0xFFEAB308); // Yellow at 8/10+
-    }
-    return const Color(0xFF16A34A); // Green normal
-  }
+
 
 
 
@@ -687,131 +667,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
     );
   }
 
-  void _showScanQuotaModal(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      backgroundColor: Colors.white,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Daily Scan Quota', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _quotaProgressColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '$_usedScansToday/$_maxScansQuota Used',
-                      style: TextStyle(color: _quotaProgressColor, fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: _usedScansToday / _maxScansQuota,
-                  minHeight: 8,
-                  backgroundColor: const Color(0xFFE2E8F0),
-                  valueColor: AlwaysStoppedAnimation<Color>(_quotaProgressColor),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text("Today's Scan Activity", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF334155))),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFF1F5F9)),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.qr_code_scanner, size: 18, color: Color(0xFF0284C7)),
-                        SizedBox(width: 10),
-                        Text('Public (Green tier)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      ],
-                    ),
-                    Text('14:32', style: TextStyle(color: Color(0xFF64748B), fontSize: 12, fontFamily: 'monospace')),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFBFDBFE)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.workspace_premium_rounded, color: Color(0xFF2563EB), size: 28),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Limit reached?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E40AF))),
-                          Text('Upgrade to Pro for 50 scans/day', style: TextStyle(fontSize: 12, color: Color(0xFF1E3A8A))),
-                        ],
-                      ),
-                    ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('PRANA Pro upgrade coming soon!')),
-                        );
-                      },
-                      child: const Text('Pro', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        );
-      },
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -1244,7 +1100,102 @@ class _MyCardScreenState extends State<MyCardScreen> {
                 }),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showReportLostStolenModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Row(
+              children: [
+                Icon(Icons.report_problem_rounded, color: Color(0xFFDC2626), size: 24),
+                SizedBox(width: 8),
+                Text(
+                  'Report Lost or Stolen Card',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'If your physical PRANA card or printed QR is lost or compromised, reporting it will instantly freeze card access and prevent emergency responders from querying your medical profile.',
+              style: TextStyle(color: Color(0xFF475569), fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFFCA5A5)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.lock_clock, color: Color(0xFFDC2626), size: 20),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Action: Instant Emergency Card Suspension & Security Logged',
+                      style: TextStyle(color: Color(0xFF991B1B), fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFDC2626),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  setState(() => _cardActive = false);
+                  _apiService.toggleCardStatus(true).catchError((_) => <String, dynamic>{});
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('🔒 Card Suspended & Reported as Lost/Stolen.'),
+                      backgroundColor: Color(0xFFDC2626),
+                    ),
+                  );
+                },
+                child: const Text('Confirm & Freeze Card Access', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+              ),
+            ),
           ],
         ),
       ),
