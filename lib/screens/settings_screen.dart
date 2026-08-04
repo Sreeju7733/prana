@@ -29,47 +29,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final dashboard = await _apiService.getDashboard(forceRefresh: true);
       final profile = dashboard['profile'] as Map<String, dynamic>?;
       if (profile != null && mounted) {
-        setState(() {
-          if (profile['full_name'] != null && profile['full_name'].toString().trim().isNotEmpty && profile['full_name'].toString().trim() != 'undefined') {
-            _userName = profile['full_name'].toString().trim();
-          } else {
-            _userName = 'Sreeju S';
-          }
-          if (profile['blood_group'] != null && profile['blood_group'].toString().trim().isNotEmpty && profile['blood_group'].toString().trim() != 'undefined') {
-            _bloodGroup = profile['blood_group'].toString().trim();
-          } else {
-            _bloodGroup = 'B+';
-          }
-          if (profile['date_of_birth'] != null && profile['date_of_birth'].toString().trim().isNotEmpty && profile['date_of_birth'].toString().trim() != 'undefined') {
-            final rawDob = profile['date_of_birth'].toString().trim().split('T').first;
-            final parts = rawDob.split('-');
-            if (parts.length == 3) {
-              _dob = '${parts[2]}/${parts[1]}/${parts[0]}';
-            } else {
-              _dob = rawDob;
-            }
-          } else {
-            _dob = '26/01/2007';
-          }
-          if (profile['gender'] != null && profile['gender'].toString().trim().isNotEmpty && profile['gender'].toString().trim() != 'undefined') {
-            final g = profile['gender'].toString().trim().toUpperCase();
-            _gender = g == 'M' ? 'Male' : (g == 'F' ? 'Female' : g);
-          } else {
-            _gender = 'Male';
-          }
-          if (profile['weight'] != null && profile['weight'].toString().trim().isNotEmpty && profile['weight'].toString().trim() != 'undefined') {
-            _weight = '${profile['weight']} kg';
-          } else {
-            _weight = '68 kg';
-          }
-          if (profile['height'] != null && profile['height'].toString().trim().isNotEmpty && profile['height'].toString().trim() != 'undefined') {
-            _height = '${profile['height']} cm';
-          } else {
-            _height = '175 cm';
-          }
-        });
+        _applyProfileData(profile);
+      }
+      final direct = await _apiService.getProfile();
+      final directProf = direct['profile'] as Map<String, dynamic>?;
+      if (directProf != null && mounted) {
+        _applyProfileData(directProf);
       }
     } catch (_) {}
+  }
+
+  void _applyProfileData(Map<String, dynamic> profile) {
+    setState(() {
+      if (profile['full_name'] != null && profile['full_name'].toString().trim().isNotEmpty && profile['full_name'].toString().trim() != 'undefined') {
+        _userName = profile['full_name'].toString().trim();
+      }
+      if (profile['blood_group'] != null && profile['blood_group'].toString().trim().isNotEmpty && profile['blood_group'].toString().trim() != 'undefined') {
+        _bloodGroup = profile['blood_group'].toString().trim();
+      }
+      if (profile['date_of_birth'] != null && profile['date_of_birth'].toString().trim().isNotEmpty && profile['date_of_birth'].toString().trim() != 'undefined') {
+        final rawDob = profile['date_of_birth'].toString().trim().split('T').first;
+        final parts = rawDob.split('-');
+        if (parts.length == 3) {
+          _dob = '${parts[2]}/${parts[1]}/${parts[0]}';
+        } else {
+          _dob = rawDob;
+        }
+      }
+      if (profile['gender'] != null && profile['gender'].toString().trim().isNotEmpty && profile['gender'].toString().trim() != 'undefined') {
+        final g = profile['gender'].toString().trim().toUpperCase();
+        _gender = (g == 'M' || g == 'MALE') ? 'Male' : ((g == 'F' || g == 'FEMALE') ? 'Female' : g);
+      }
+      if (profile['weight_kg'] != null && profile['weight_kg'].toString().trim().isNotEmpty) {
+        _weight = '${profile['weight_kg']} kg';
+      } else if (profile['weight'] != null && profile['weight'].toString().trim().isNotEmpty && profile['weight'].toString().trim() != 'undefined') {
+        _weight = '${profile['weight']} kg';
+      }
+      if (profile['height_cm'] != null && profile['height_cm'].toString().trim().isNotEmpty) {
+        _height = '${profile['height_cm']} cm';
+      } else if (profile['height'] != null && profile['height'].toString().trim().isNotEmpty && profile['height'].toString().trim() != 'undefined') {
+        _height = '${profile['height']} cm';
+      }
+    });
   }
 
 

@@ -19,6 +19,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Step 1: Basic Info
   final _nameController = TextEditingController();
   final _dobController = TextEditingController();
+  final _weightController = TextEditingController();
+  final _heightController = TextEditingController();
   String _selectedGender = 'M';
   String _selectedBloodGroup = 'O+';
   final List<String> _bloodGroups = [
@@ -31,6 +33,104 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'O+',
     'O-'
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingData();
+  }
+
+  Future<void> _loadExistingData() async {
+    try {
+      final dashboard = await _apiService.getDashboard(forceRefresh: true);
+      final profile = dashboard['profile'] as Map<String, dynamic>?;
+      if (profile != null && mounted) {
+        setState(() {
+          if (profile['full_name'] != null &&
+              profile['full_name'].toString().trim().isNotEmpty &&
+              profile['full_name'].toString().trim() != 'undefined') {
+            _nameController.text = profile['full_name'].toString().trim();
+          }
+          if (profile['date_of_birth'] != null &&
+              profile['date_of_birth'].toString().trim().isNotEmpty &&
+              profile['date_of_birth'].toString().trim() != 'undefined') {
+            final rawDob = profile['date_of_birth'].toString().trim().split('T').first;
+            _dobController.text = rawDob;
+          }
+          if (profile['gender'] != null) {
+            final g = profile['gender'].toString().trim().toUpperCase();
+            _selectedGender = (g == 'MALE' || g == 'M')
+                ? 'M'
+                : ((g == 'FEMALE' || g == 'F') ? 'F' : 'O');
+          }
+          if (profile['blood_group'] != null &&
+              _bloodGroups.contains(profile['blood_group'].toString().trim())) {
+            _selectedBloodGroup = profile['blood_group'].toString().trim();
+          }
+          if (profile['weight'] != null && profile['weight'].toString().trim().isNotEmpty) {
+            _weightController.text = profile['weight'].toString().trim();
+          } else if (profile['weight_kg'] != null && profile['weight_kg'].toString().trim().isNotEmpty) {
+            _weightController.text = profile['weight_kg'].toString().trim();
+          }
+          if (profile['height'] != null && profile['height'].toString().trim().isNotEmpty) {
+            _heightController.text = profile['height'].toString().trim();
+          } else if (profile['height_cm'] != null && profile['height_cm'].toString().trim().isNotEmpty) {
+            _heightController.text = profile['height_cm'].toString().trim();
+          }
+        });
+      }
+
+      final results = await Future.wait([
+        _apiService.getAllergies(forceRefresh: true),
+        _apiService.getMedications(forceRefresh: true),
+        _apiService.getEmergencyContacts(),
+      ]);
+
+      final allergies = results[0];
+      final meds = results[1];
+      final contacts = results[2];
+
+      if (mounted) {
+        setState(() {
+          if (allergies.isNotEmpty) {
+            _hasKnownAllergies = true;
+            _allergiesList.clear();
+            for (var a in allergies) {
+              final String sev = a['severity']?.toString() ?? 'Severe';
+              final String capitalizedSev = sev.isEmpty ? 'Severe' : (sev[0].toUpperCase() + sev.substring(1).toLowerCase());
+              _allergiesList.add({
+                'name': a['allergen']?.toString() ?? '',
+                'severity': capitalizedSev,
+                'reaction': a['reaction_description']?.toString() ?? '',
+              });
+            }
+          }
+          if (meds.isNotEmpty) {
+            _takesMedications = true;
+            _medicationsList.clear();
+            for (var m in meds) {
+              _medicationsList.add({
+                'name': m['name']?.toString() ?? '',
+                'dose_value': m['dose_value']?.toString() ?? '',
+                'dose_unit': m['dose_unit']?.toString() ?? 'mg',
+                'dose': m['dose']?.toString() ?? '',
+                'frequency': m['frequency']?.toString() ?? 'Twice daily',
+                'reason': m['reason']?.toString() ?? '',
+              });
+            }
+          }
+          if (contacts.isNotEmpty) {
+            final c = contacts.first;
+            _contactNameController.text = c['name']?.toString() ?? '';
+            _contactPhoneController.text = c['phone']?.toString() ?? c['phone_number']?.toString() ?? '';
+            if (c['relationship'] != null) {
+              _contactRelationship = c['relationship'].toString();
+            }
+          }
+        });
+      }
+    } catch (_) {}
+  }
 
   // Step 2: Critical Allergies
   bool _hasKnownAllergies = false;
@@ -277,6 +377,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         dateOfBirth:
             _dobController.text.isNotEmpty ? _dobController.text.trim() : null,
         bloodGroup: _selectedBloodGroup,
+        weightKg: double.tryParse(_weightController.text.trim()),
+        heightCm: double.tryParse(_heightController.text.trim()),
       );
 
       // 2. Post Allergies
@@ -570,6 +672,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             overflow: TextOverflow.ellipsis)),
                   ],
                   onChanged: (val) => setState(() => _selectedGender = val!),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Weight (kg) & Height (cm)
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _weightController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Weight (kg)',
+                    hintText: 'e.g. 68',
+                    prefixIcon: Icon(Icons.monitor_weight_outlined),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: TextFormField(
+                  controller: _heightController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Height (cm)',
+                    hintText: 'e.g. 175',
+                    prefixIcon: Icon(Icons.height_outlined),
+                  ),
                 ),
               ),
             ],

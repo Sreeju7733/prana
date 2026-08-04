@@ -20,12 +20,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Map<String, dynamic>? _dashboardData;
   Future<List<dynamic>>? _contactsFuture;
+  Future<Map<String, dynamic>?>? _insuranceFuture;
 
   void _refreshContacts() {
     _cachedEmergencyModalPayload = null;
     HealthCacheManager.isDirty = true;
     setState(() {
       _contactsFuture = _apiService.getEmergencyContacts();
+    });
+  }
+
+  void _refreshInsurance() {
+    setState(() {
+      _insuranceFuture = _apiService.getInsurance();
     });
   }
 
@@ -159,6 +166,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _contactsFuture = _apiService.getEmergencyContacts();
+    _insuranceFuture = _apiService.getInsurance();
     _dashboardData = _cachedDashboardData ?? HealthCacheManager.dashboardData ?? _getFallbackDashboardData();
     _fetchDashboardData(force: true);
   }
@@ -922,6 +930,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           onRefresh: () async {
             await _fetchDashboardData(force: true);
             _refreshContacts();
+            _refreshInsurance();
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
@@ -1084,160 +1093,441 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 24),
-
-              // 6. Emergency Contacts Management Section (Add, Edit, Delete)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'EMERGENCY CONTACTS',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: () => _showAddOrEditContactModal(context),
-                    icon: const Icon(Icons.add, size: 16, color: Color(0xFF0D9488)),
-                    label: const Text('Add Contact', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
+              ),              // 6. Emergency Contacts Management Section (Add, Edit, Delete - Max 3)
               FutureBuilder<List<dynamic>>(
                 future: _contactsFuture ??= _apiService.getEmergencyContacts(),
                 builder: (context, snapshot) {
                   final contacts = snapshot.data ?? [];
-                  if (snapshot.connectionState == ConnectionState.waiting && contacts.isEmpty) {
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: const Center(
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0D9488)),
-                        ),
-                      ),
-                    );
-                  }
+                  final bool limitReached = contacts.length >= 3;
 
-                  if (contacts.isEmpty) {
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: Row(
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Icon(Icons.contact_phone_outlined, color: Color(0xFF94A3B8), size: 24),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'No emergency contacts added',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF334155)),
+                          Row(
+                            children: [
+                              Text(
+                                'EMERGENCY CONTACTS',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1.2,
+                                  color: Colors.grey.shade600,
                                 ),
-                                SizedBox(height: 2),
-                                Text(
-                                  'Add trusted family or doctors to notify automatically when your card is scanned.',
-                                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: limitReached ? const Color(0xFFFEF2F2) : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: limitReached ? const Color(0xFFFCA5A5) : const Color(0xFFCBD5E1)),
                                 ),
-                              ],
-                            ),
+                                child: Text(
+                                  '${contacts.length}/3',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: limitReached ? const Color(0xFFDC2626) : const Color(0xFF475569),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          TextButton(
-                            onPressed: () => _showAddOrEditContactModal(context),
-                            child: const Text('Add', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
+                          TextButton.icon(
+                            onPressed: () {
+                              if (limitReached) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Maximum limit of 3 emergency contacts reached.'),
+                                    backgroundColor: Color(0xFFDC2626),
+                                  ),
+                                );
+                                return;
+                              }
+                              _showAddOrEditContactModal(context, currentCount: contacts.length);
+                            },
+                            icon: Icon(Icons.add, size: 16, color: limitReached ? Colors.grey : const Color(0xFF0D9488)),
+                            label: Text(
+                              'Add Contact',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: limitReached ? Colors.grey : const Color(0xFF0D9488),
+                              ),
+                            ),
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
                           ),
                         ],
                       ),
-                    );
-                  }
-
-                  return Column(
-                    children: contacts.map((c) {
-                      final String name = c['name'] ?? 'Emergency Contact';
-                      final String rel = c['relationship'] ?? 'Family';
-                      final String contactId = c['id']?.toString() ?? '';
-
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFCCFBF1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.person, color: Color(0xFF0D9488), size: 20),
+                      const SizedBox(height: 12),
+                      if (snapshot.connectionState == ConnectionState.waiting && contacts.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: const Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0D9488)),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                        )
+                      else if (contacts.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.contact_phone_outlined, color: Color(0xFF94A3B8), size: 24),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'No emergency contacts added',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF334155)),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'Add up to 3 trusted contacts to notify automatically in emergencies.',
+                                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => _showAddOrEditContactModal(context, currentCount: contacts.length),
+                                child: const Text('Add', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Column(
+                          children: contacts.map((c) {
+                            final String name = c['name'] ?? 'Emergency Contact';
+                            final String rel = c['relationship'] ?? 'Family';
+                            final String contactId = c['id']?.toString() ?? '';
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Row(
                                 children: [
-                                  Text(
-                                    name,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFCCFBF1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.person, color: Color(0xFF0D9488), size: 20),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    rel,
-                                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          rel,
+                                          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined, color: Color(0xFF0D9488), size: 20),
+                                    onPressed: () => _showAddOrEditContactModal(context, contact: c, currentCount: contacts.length),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
+                                    onPressed: () {
+                                      if (contactId.isNotEmpty) {
+                                        _confirmDeleteDialog(
+                                          title: 'Delete Emergency Contact',
+                                          message: 'Are you sure you want to delete "$name"?',
+                                          onConfirm: () async {
+                                            await _apiService.deleteEmergencyContact(contactId);
+                                            _refreshContacts();
+                                          },
+                                        );
+                                      }
+                                    },
                                   ),
                                 ],
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined, color: Color(0xFF0D9488), size: 20),
-                              onPressed: () => _showAddOrEditContactModal(context, contact: c),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
-                              onPressed: () {
-                                if (contactId.isNotEmpty) {
-                                  _confirmDeleteDialog(
-                                    title: 'Delete Emergency Contact',
-                                    message: 'Are you sure you want to delete "$name"?',
-                                    onConfirm: () async {
-                                      await _apiService.deleteEmergencyContact(contactId);
-                                      _refreshContacts();
-                                    },
-                                  );
-                                }
-                              },
-                            ),
-                          ],
+                            );
+                          }).toList(),
                         ),
-                      );
-                    }).toList(),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // 7. Health Insurance Management Section
+              FutureBuilder<Map<String, dynamic>?>(
+                future: _insuranceFuture ??= _apiService.getInsurance(),
+                builder: (context, snapshot) {
+                  final ins = snapshot.data;
+                  final bool hasIns = ins != null && ins.isNotEmpty && (ins['provider_name'] ?? '').toString().isNotEmpty;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'HEALTH INSURANCE',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => _showAddOrEditInsuranceModal(context, existing: ins),
+                            icon: Icon(hasIns ? Icons.edit_outlined : Icons.add, size: 16, color: const Color(0xFF0D9488)),
+                            label: Text(
+                              hasIns ? 'Edit Policy' : 'Add Insurance',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                            ),
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (snapshot.connectionState == ConnectionState.waiting && ins == null)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: const Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0D9488)),
+                            ),
+                          ),
+                        )
+                      else if (!hasIns)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.verified_user_outlined, color: Color(0xFF94A3B8), size: 24),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'No health insurance added',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF334155)),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'Add your TPA policy & helpline for instant cashless claims in emergencies.',
+                                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => _showAddOrEditInsuranceModal(context, existing: ins),
+                                child: const Text('Add', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
+                              ),
+                            ],
+                          ),
+                        )
+                      else ...[
+                        Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF0D9488).withValues(alpha: 0.2),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.shield, color: Color(0xFF2DD4BF), size: 20),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        ins['provider_name'] ?? 'Health Insurance',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0D9488).withValues(alpha: 0.25),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: const Color(0xFF2DD4BF).withValues(alpha: 0.4)),
+                                    ),
+                                    child: Text(
+                                      ins['coverage_type'] ?? 'Comprehensive',
+                                      style: const TextStyle(color: Color(0xFF2DD4BF), fontSize: 11, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'POLICY NUMBER',
+                                          style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          ins['policy_number'] ?? 'N/A',
+                                          style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 14),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if ((ins['group_number'] ?? '').toString().isNotEmpty)
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'GROUP / TPA ID',
+                                            style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            ins['group_number'],
+                                            style: const TextStyle(color: Colors.white70, fontFamily: 'monospace', fontSize: 13),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              if ((ins['helpline_phone'] ?? '').toString().isNotEmpty) ...[
+                                const SizedBox(height: 14),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.headset_mic_outlined, color: Color(0xFF38BDF8), size: 16),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '24/7 Helpline: ${ins['helpline_phone']}',
+                                        style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 12, fontWeight: FontWeight.w500),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined, color: Colors.white70, size: 18),
+                                    onPressed: () => _showAddOrEditInsuranceModal(context, existing: ins),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFCA5A5), size: 18),
+                                    onPressed: () {
+                                      _confirmDeleteDialog(
+                                        title: 'Delete Insurance Policy',
+                                        message: 'Are you sure you want to remove your health insurance details?',
+                                        onConfirm: () async {
+                                          await _apiService.deleteInsurance();
+                                          _refreshInsurance();
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   );
                 },
               ),
@@ -1262,18 +1552,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           children: [
             Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(12),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF1F5F9),
                 shape: BoxShape.circle,
-                color: const Color(0xFF0D9488).withValues(alpha: 0.08),
-                border: Border.all(color: const Color(0xFF0D9488).withValues(alpha: 0.2)),
               ),
-              child: Icon(icon, color: const Color(0xFF0D9488), size: 22),
+              child: Icon(icon, color: const Color(0xFF0F172A), size: 20),
             ),
             const SizedBox(height: 6),
             SizedBox(
-              width: 72,
+              width: 70,
               child: Text(
                 label,
                 textAlign: TextAlign.center,
@@ -1288,7 +1576,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showAddOrEditContactModal(BuildContext context, {Map<String, dynamic>? contact}) {
+  void _showAddOrEditContactModal(BuildContext context, {Map<String, dynamic>? contact, int currentCount = 0}) {
+    if (contact == null && currentCount >= 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Maximum limit of 3 emergency contacts reached.'),
+          backgroundColor: Color(0xFFDC2626),
+        ),
+      );
+      return;
+    }
+
     final nameController = TextEditingController(text: contact?['name'] ?? '');
     final phoneController = TextEditingController(text: contact?['phone'] ?? '');
 
@@ -1330,7 +1628,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        contact == null ? 'Add Emergency Contact' : 'Edit Emergency Contact',
+                        contact == null ? 'Add Emergency Contact (Max 3)' : 'Edit Emergency Contact',
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                       ),
                       IconButton(
@@ -1427,6 +1725,160 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     );
   }
+
+  void _showAddOrEditInsuranceModal(BuildContext context, {Map<String, dynamic>? existing}) {
+    final providerController = TextEditingController(text: existing?['provider_name'] ?? '');
+    final policyController = TextEditingController(text: existing?['policy_number'] ?? '');
+    final groupController = TextEditingController(text: existing?['group_number'] ?? '');
+    final helplineController = TextEditingController(text: existing?['helpline_phone'] ?? '');
+
+    const coverageOptions = [
+      'Comprehensive Cashless',
+      'Basic Hospitalization',
+      'Corporate Group Cover',
+      'Personal Family Floater',
+    ];
+
+    String selectedCoverage = existing?['coverage_type'] ?? 'Comprehensive Cashless';
+    if (!coverageOptions.contains(selectedCoverage)) {
+      selectedCoverage = 'Comprehensive Cashless';
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        existing == null ? 'Add Health Insurance' : 'Edit Health Insurance',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: providerController,
+                    decoration: InputDecoration(
+                      labelText: 'Insurance Provider (e.g. Star Health, HDFC ERGO)',
+                      prefixIcon: const Icon(Icons.shield_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: policyController,
+                    decoration: InputDecoration(
+                      labelText: 'Policy Number',
+                      prefixIcon: const Icon(Icons.badge_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: groupController,
+                    decoration: InputDecoration(
+                      labelText: 'Group / TPA ID (Optional)',
+                      prefixIcon: const Icon(Icons.groups_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: helplineController,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: '24/7 TPA Helpline Phone Number',
+                      prefixIcon: const Icon(Icons.phone_in_talk_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedCoverage,
+                    decoration: InputDecoration(
+                      labelText: 'Coverage Type',
+                      prefixIcon: const Icon(Icons.verified_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    items: coverageOptions.map((cov) {
+                      return DropdownMenuItem<String>(
+                        value: cov,
+                        child: Text(cov),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setModalState(() {
+                          selectedCoverage = val;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0D9488),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () async {
+                        if (providerController.text.trim().isEmpty || policyController.text.trim().isEmpty) return;
+                        try {
+                          final payload = {
+                            'provider_name': providerController.text.trim(),
+                            'policy_number': policyController.text.trim(),
+                            'group_number': groupController.text.trim(),
+                            'helpline_phone': helplineController.text.trim(),
+                            'coverage_type': selectedCoverage,
+                          };
+                          await _apiService.saveInsurance(payload);
+                          if (context.mounted) {
+                            Navigator.pop(ctx);
+                            _refreshInsurance();
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
+                            );
+                          }
+                        }
+                      },
+                      child: Text(
+                        existing == null ? 'Save Health Insurance' : 'Update Health Insurance',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }
-
-
