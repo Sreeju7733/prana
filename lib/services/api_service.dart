@@ -727,4 +727,54 @@ class ApiService {
       throw Exception('Failed to delete emergency contact');
     }
   }
+
+  // Insurance API Methods
+  Future<Map<String, dynamic>?> getInsurance() async {
+    try {
+      final token = await StorageService().getToken();
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/insurance'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['data'] as Map<String, dynamic>?;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<Map<String, dynamic>> saveInsurance(Map<String, dynamic> insuranceData) async {
+    final token = await StorageService().getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/insurance'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(insuranceData),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to save insurance');
+    }
+  }
+
+  Future<void> deleteInsurance() async {
+    final token = await StorageService().getToken();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/insurance'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete insurance');
+    }
+  }
 }
