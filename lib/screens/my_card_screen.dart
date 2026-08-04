@@ -130,42 +130,125 @@ class _MyCardScreenState extends State<MyCardScreen> {
     if (!enable) {
       showDialog(
         context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Suspend your card?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          content: const Text(
-            'Anyone scanning your QR will see "Card Suspended."\n\nYou can reactivate anytime.',
-            style: TextStyle(color: Color(0xFF475569), fontSize: 14, height: 1.4),
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          elevation: 8,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFEF2F2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.pause_circle_filled_rounded,
+                    color: Color(0xFFDC2626),
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Suspend Emergency Card?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Anyone scanning your QR code will see "Card Suspended" and cannot view your profile.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 13,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF0D9488)),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'You can reactivate your card anytime.',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF334155), fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: const Color(0xFFF1F5F9),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: Color(0xFF475569),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: const Color(0xFFDC2626),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          Navigator.pop(context);
+                          setState(() => _cardActive = false);
+                          try {
+                            await _apiService.toggleCardStatus(true);
+                          } catch (_) {}
+                          messenger.showSnackBar(
+                            const SnackBar(content: Text('Card Suspended. Scans will display "Card Suspended."')),
+                          );
+                        },
+                        child: const Text(
+                          'Suspend',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          actionsPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-          actions: [
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDC2626),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () async {
-                final messenger = ScaffoldMessenger.of(context);
-                Navigator.pop(context);
-                setState(() => _cardActive = false);
-                try {
-                  await _apiService.toggleCardStatus(true);
-                } catch (_) {}
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('Card Suspended. Scans will display "Card Suspended."')),
-                );
-              },
-              child: const Text('Suspend', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
         ),
       );
     } else {
@@ -347,30 +430,62 @@ class _MyCardScreenState extends State<MyCardScreen> {
                   setState(() => _cardActive = false);
                   showDialog(
                     context: context,
-                    builder: (context) => AlertDialog(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      title: const Row(
-                        children: [
-                          Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626)),
-                          SizedBox(width: 8),
-                          Text('Card Suspended & Reported'),
-                        ],
-                      ),
-                      content: Text(
-                        'Security incident logged for ${item.id} (${item.location}).\n\nYour card has been instantly suspended to protect your data.',
-                        style: const TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.4),
-                      ),
-                      actions: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0F172A),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('OK'),
+                    builder: (context) => Dialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                      elevation: 8,
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFEF2F2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.shield_sharp,
+                                color: Color(0xFFDC2626),
+                                size: 30,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Card Suspended & Reported',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Security incident logged for ${item.id} (${item.location}).\n\nYour card has been instantly suspended to protect your data.',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.45),
+                            ),
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0F172A),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   );
                 },
