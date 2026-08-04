@@ -111,6 +111,7 @@ class ApiService {
     String? bloodGroup,
     double? weightKg,
     double? heightCm,
+    String? avatarUrl,
   }) async {
     final token = await StorageService().getToken();
     final Map<String, dynamic> body = {};
@@ -120,6 +121,7 @@ class ApiService {
     if (bloodGroup != null) body['blood_group'] = bloodGroup;
     if (weightKg != null) body['weight_kg'] = weightKg;
     if (heightCm != null) body['height_cm'] = heightCm;
+    if (avatarUrl != null) body['avatar_url'] = avatarUrl;
 
     final response = await http.put(
       Uri.parse('$baseUrl/api/patient/profile'),
@@ -136,6 +138,27 @@ class ApiService {
     } else {
       final errorData = jsonDecode(response.body);
       throw Exception(errorData['error'] ?? 'Failed to update profile');
+    }
+  }
+
+  Future<String> uploadAvatarBase64(String base64Image) async {
+    final token = await StorageService().getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/patient/avatar'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'imageBase64': base64Image}),
+    );
+
+    if (response.statusCode == 200) {
+      HealthCacheManager.invalidate();
+      final data = jsonDecode(response.body);
+      return data['avatar_url'] ?? base64Image;
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to upload avatar');
     }
   }
 
