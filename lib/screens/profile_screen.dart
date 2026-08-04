@@ -820,6 +820,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
           const SizedBox(height: 24),
 
+          // Profile Avatar Upload Header
+          Center(
+            child: GestureDetector(
+              onTap: _isUploadingAvatar ? null : _pickAvatarImage,
+              child: Stack(
+                children: [
+                  Container(
+                    width: 96,
+                    height: 96,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFCCFBF1),
+                      border: Border.all(color: const Color(0xFF0D9488), width: 2.5),
+                    ),
+                    child: _isUploadingAvatar
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Color(0xFF0D9488),
+                            ),
+                          )
+                        : ClipOval(
+                            child: (_avatarUrl != null && _avatarUrl!.isNotEmpty)
+                                ? (_avatarUrl!.startsWith('data:image')
+                                    ? Image.memory(
+                                        base64Decode(_avatarUrl!.split(',').last),
+                                        fit: BoxFit.cover,
+                                        width: 96,
+                                        height: 96,
+                                      )
+                                    : Image.network(
+                                        _avatarUrl!,
+                                        fit: BoxFit.cover,
+                                        width: 96,
+                                        height: 96,
+                                        errorBuilder: (_, __, ___) => const Icon(
+                                          Icons.person,
+                                          size: 50,
+                                          color: Color(0xFF0D9488),
+                                        ),
+                                      ))
+                                : const Icon(
+                                    Icons.person,
+                                    size: 50,
+                                    color: Color(0xFF0D9488),
+                                  ),
+                          ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0D9488),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
           // Full Name
           TextFormField(
             controller: _nameController,
