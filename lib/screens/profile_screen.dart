@@ -4,7 +4,8 @@ import '../main_navigation_screen.dart';
 import '../services/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final bool isEditMode;
+  const ProfileScreen({super.key, this.isEditMode = false});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -37,52 +38,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    final cached = HealthCacheManager.dashboardData?['profile'] as Map<String, dynamic>?;
+    if (cached != null) {
+      _populateProfileMap(cached);
+    }
     _loadExistingData();
+  }
+
+  void _populateProfileMap(Map<String, dynamic> profile) {
+    if (profile['full_name'] != null &&
+        profile['full_name'].toString().trim().isNotEmpty &&
+        profile['full_name'].toString().trim() != 'undefined') {
+      _nameController.text = profile['full_name'].toString().trim();
+    }
+    if (profile['date_of_birth'] != null &&
+        profile['date_of_birth'].toString().trim().isNotEmpty &&
+        profile['date_of_birth'].toString().trim() != 'undefined') {
+      final rawDob = profile['date_of_birth'].toString().trim().split('T').first;
+      _dobController.text = rawDob;
+    }
+    if (profile['gender'] != null) {
+      final g = profile['gender'].toString().trim().toUpperCase();
+      _selectedGender = (g == 'MALE' || g == 'M')
+          ? 'M'
+          : ((g == 'FEMALE' || g == 'F') ? 'F' : 'O');
+    }
+    if (profile['blood_group'] != null &&
+        _bloodGroups.contains(profile['blood_group'].toString().trim())) {
+      _selectedBloodGroup = profile['blood_group'].toString().trim();
+    }
+    if (profile['weight'] != null && profile['weight'].toString().trim().isNotEmpty) {
+      _weightController.text = profile['weight'].toString().trim();
+    } else if (profile['weight_kg'] != null && profile['weight_kg'].toString().trim().isNotEmpty) {
+      _weightController.text = profile['weight_kg'].toString().trim();
+    }
+    if (profile['height'] != null && profile['height'].toString().trim().isNotEmpty) {
+      _heightController.text = profile['height'].toString().trim();
+    } else if (profile['height_cm'] != null && profile['height_cm'].toString().trim().isNotEmpty) {
+      _heightController.text = profile['height_cm'].toString().trim();
+    }
   }
 
   Future<void> _loadExistingData() async {
     try {
-      final dashboard = await _apiService.getDashboard(forceRefresh: true);
+      final dashboard = await _apiService.getDashboard();
       final profile = dashboard['profile'] as Map<String, dynamic>?;
       if (profile != null && mounted) {
         setState(() {
-          if (profile['full_name'] != null &&
-              profile['full_name'].toString().trim().isNotEmpty &&
-              profile['full_name'].toString().trim() != 'undefined') {
-            _nameController.text = profile['full_name'].toString().trim();
-          }
-          if (profile['date_of_birth'] != null &&
-              profile['date_of_birth'].toString().trim().isNotEmpty &&
-              profile['date_of_birth'].toString().trim() != 'undefined') {
-            final rawDob = profile['date_of_birth'].toString().trim().split('T').first;
-            _dobController.text = rawDob;
-          }
-          if (profile['gender'] != null) {
-            final g = profile['gender'].toString().trim().toUpperCase();
-            _selectedGender = (g == 'MALE' || g == 'M')
-                ? 'M'
-                : ((g == 'FEMALE' || g == 'F') ? 'F' : 'O');
-          }
-          if (profile['blood_group'] != null &&
-              _bloodGroups.contains(profile['blood_group'].toString().trim())) {
-            _selectedBloodGroup = profile['blood_group'].toString().trim();
-          }
-          if (profile['weight'] != null && profile['weight'].toString().trim().isNotEmpty) {
-            _weightController.text = profile['weight'].toString().trim();
-          } else if (profile['weight_kg'] != null && profile['weight_kg'].toString().trim().isNotEmpty) {
-            _weightController.text = profile['weight_kg'].toString().trim();
-          }
-          if (profile['height'] != null && profile['height'].toString().trim().isNotEmpty) {
-            _heightController.text = profile['height'].toString().trim();
-          } else if (profile['height_cm'] != null && profile['height_cm'].toString().trim().isNotEmpty) {
-            _heightController.text = profile['height_cm'].toString().trim();
-          }
+          _populateProfileMap(profile);
         });
       }
 
+      if (widget.isEditMode) return;
+
       final results = await Future.wait([
-        _apiService.getAllergies(forceRefresh: true),
-        _apiService.getMedications(forceRefresh: true),
+        _apiService.getAllergies(),
+        _apiService.getMedications(),
         _apiService.getEmergencyContacts(),
       ]);
 
@@ -461,9 +472,103 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _saveProfileOnly() async {
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your full name')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await _apiService.updateProfile(
+        fullName: _nameController.text.trim(),
+        gender: _selectedGender,
+        dateOfBirth: _dobController.text.isNotEmpty ? _dobController.text.trim() : null,
+        bloodGroup: _selectedBloodGroup,
+        weightKg: double.tryParse(_weightController.text.trim()),
+        heightCm: double.tryParse(_heightController.text.trim()),
+      );
+
+      HealthCacheManager.invalidate();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully!'),
+            backgroundColor: Color(0xFF0D9488),
+          ),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    if (widget.isEditMode) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBar(
+          title: const Text('Edit Profile',
+              style: TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold)),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Color(0xFF0F172A), size: 18),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(child: _buildStep1BasicInfo()),
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0D9488),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: _isLoading ? null : _saveProfileOnly,
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : const Text('Save Profile',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.white)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     const totalSteps = 4;
 
     return Scaffold(
