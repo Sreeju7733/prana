@@ -19,6 +19,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   static List<dynamic>? _cachedEmergencyModalPayload;
 
   Map<String, dynamic>? _dashboardData;
+  Future<List<dynamic>>? _contactsFuture;
+
+  void _refreshContacts() {
+    _cachedEmergencyModalPayload = null;
+    HealthCacheManager.isDirty = true;
+    setState(() {
+      _contactsFuture = _apiService.getEmergencyContacts();
+    });
+  }
 
   Map<String, dynamic> _getFallbackDashboardData() {
     return {
