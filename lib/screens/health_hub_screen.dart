@@ -3578,10 +3578,13 @@ class _HealthHubScreenState extends State<HealthHubScreen>
               IconButton(
                 icon: const Icon(Icons.delete_outline_rounded,
                     color: Color(0xFFEF4444), size: 20),
-                onPressed: () async {
+                onPressed: () {
                   if (id.isNotEmpty) {
-                    await _apiService.deleteVital(id).catchError((_) {});
-                    _loadHubData();
+                    _confirmDeleteDialog(
+                      title: 'Delete Vital Log',
+                      message: 'Are you sure you want to delete this vital record?',
+                      onConfirm: () => _apiService.deleteVital(id),
+                    );
                   }
                 },
               ),

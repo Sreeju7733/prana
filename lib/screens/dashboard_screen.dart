@@ -1093,12 +1093,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
-                              onPressed: () async {
+                              onPressed: () {
                                 if (contactId.isNotEmpty) {
-                                  try {
-                                    await _apiService.deleteEmergencyContact(contactId);
-                                    _refreshContacts();
-                                  } catch (_) {}
+                                  _confirmDeleteDialog(
+                                    title: 'Delete Emergency Contact',
+                                    message: 'Are you sure you want to delete "$name"?',
+                                    onConfirm: () async {
+                                      await _apiService.deleteEmergencyContact(contactId);
+                                      _refreshContacts();
+                                    },
+                                  );
                                 }
                               },
                             ),
