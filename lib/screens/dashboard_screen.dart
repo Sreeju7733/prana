@@ -1173,7 +1173,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: selectedRelationship,
+                    initialValue: selectedRelationship,
                     decoration: InputDecoration(
                       labelText: 'Relationship',
                       prefixIcon: const Icon(Icons.people_outline),
