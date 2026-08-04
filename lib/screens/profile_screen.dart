@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import '../main_navigation_screen.dart';
 import '../services/api_service.dart';
 
@@ -22,6 +24,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _dobController = TextEditingController();
   final _weightController = TextEditingController();
   final _heightController = TextEditingController();
+  String? _avatarUrl;
+  bool _isUploadingAvatar = false;
   String _selectedGender = 'M';
   String _selectedBloodGroup = 'O+';
   final List<String> _bloodGroups = [
@@ -76,6 +80,93 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _heightController.text = profile['height'].toString().trim();
     } else if (profile['height_cm'] != null && profile['height_cm'].toString().trim().isNotEmpty) {
       _heightController.text = profile['height_cm'].toString().trim();
+    }
+    if (profile['avatar_url'] != null &&
+        profile['avatar_url'].toString().trim().isNotEmpty &&
+        profile['avatar_url'].toString().trim() != 'undefined') {
+      _avatarUrl = profile['avatar_url'].toString().trim();
+    }
+  }
+
+  Future<void> _pickAvatarImage() async {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Choose Profile Photo',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A)),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF0D9488)),
+                  title: const Text('Choose from Gallery'),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await _selectAndUploadImage(ImageSource.gallery);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF0D9488)),
+                  title: const Text('Take a Photo'),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await _selectAndUploadImage(ImageSource.camera);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _selectAndUploadImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 600,
+        maxHeight: 600,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() => _isUploadingAvatar = true);
+        final bytes = await pickedFile.readAsBytes();
+        final base64Str = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+        final uploadedUrl = await _apiService.uploadAvatarBase64(base64Str);
+        if (mounted) {
+          setState(() {
+            _avatarUrl = uploadedUrl;
+            _isUploadingAvatar = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile photo uploaded and saved!'),
+              backgroundColor: Color(0xFF0D9488),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploadingAvatar = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload photo: ${e.toString().replaceAll("Exception: ", "")}')),
+        );
+      }
     }
   }
 
