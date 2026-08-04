@@ -62,15 +62,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final g = profile['gender'].toString().trim().toUpperCase();
         _gender = (g == 'M' || g == 'MALE') ? 'Male' : ((g == 'F' || g == 'FEMALE') ? 'Female' : g);
       }
-      if (profile['weight_kg'] != null && profile['weight_kg'].toString().trim().isNotEmpty) {
-        _weight = '${profile['weight_kg']} kg';
-      } else if (profile['weight'] != null && profile['weight'].toString().trim().isNotEmpty && profile['weight'].toString().trim() != 'undefined') {
+      if (profile['weight'] != null && profile['weight'].toString().trim().isNotEmpty && profile['weight'].toString().trim() != 'undefined' && profile['weight'].toString().trim() != 'null') {
         _weight = '${profile['weight']} kg';
+      } else if (profile['weight_kg'] != null && profile['weight_kg'].toString().trim().isNotEmpty && profile['weight_kg'].toString().trim() != 'undefined' && profile['weight_kg'].toString().trim() != 'null') {
+        _weight = '${profile['weight_kg']} kg';
       }
-      if (profile['height_cm'] != null && profile['height_cm'].toString().trim().isNotEmpty) {
-        _height = '${profile['height_cm']} cm';
-      } else if (profile['height'] != null && profile['height'].toString().trim().isNotEmpty && profile['height'].toString().trim() != 'undefined') {
+      if (profile['height'] != null && profile['height'].toString().trim().isNotEmpty && profile['height'].toString().trim() != 'undefined' && profile['height'].toString().trim() != 'null') {
         _height = '${profile['height']} cm';
+      } else if (profile['height_cm'] != null && profile['height_cm'].toString().trim().isNotEmpty && profile['height_cm'].toString().trim() != 'undefined' && profile['height_cm'].toString().trim() != 'null') {
+        _height = '${profile['height_cm']} cm';
       }
       if (profile['avatar_url'] != null && profile['avatar_url'].toString().trim().isNotEmpty && profile['avatar_url'].toString().trim() != 'undefined') {
         _avatarUrl = profile['avatar_url'].toString().trim();

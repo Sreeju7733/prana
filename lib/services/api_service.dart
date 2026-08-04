@@ -119,8 +119,14 @@ class ApiService {
     if (gender != null) body['gender'] = gender;
     if (dateOfBirth != null) body['date_of_birth'] = dateOfBirth;
     if (bloodGroup != null) body['blood_group'] = bloodGroup;
-    if (weightKg != null) body['weight_kg'] = weightKg;
-    if (heightCm != null) body['height_cm'] = heightCm;
+    if (weightKg != null) {
+      body['weight_kg'] = weightKg;
+      body['weight'] = weightKg;
+    }
+    if (heightCm != null) {
+      body['height_cm'] = heightCm;
+      body['height'] = heightCm;
+    }
     if (avatarUrl != null) body['avatar_url'] = avatarUrl;
 
     final response = await http.put(

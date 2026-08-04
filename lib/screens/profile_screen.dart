@@ -71,14 +71,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _bloodGroups.contains(profile['blood_group'].toString().trim())) {
       _selectedBloodGroup = profile['blood_group'].toString().trim();
     }
-    if (profile['weight'] != null && profile['weight'].toString().trim().isNotEmpty) {
+    if (profile['weight'] != null &&
+        profile['weight'].toString().trim().isNotEmpty &&
+        profile['weight'].toString().trim() != 'null' &&
+        profile['weight'].toString().trim() != 'undefined') {
       _weightController.text = profile['weight'].toString().trim();
-    } else if (profile['weight_kg'] != null && profile['weight_kg'].toString().trim().isNotEmpty) {
+    } else if (profile['weight_kg'] != null &&
+        profile['weight_kg'].toString().trim().isNotEmpty &&
+        profile['weight_kg'].toString().trim() != 'null' &&
+        profile['weight_kg'].toString().trim() != 'undefined') {
       _weightController.text = profile['weight_kg'].toString().trim();
     }
-    if (profile['height'] != null && profile['height'].toString().trim().isNotEmpty) {
+
+    if (profile['height'] != null &&
+        profile['height'].toString().trim().isNotEmpty &&
+        profile['height'].toString().trim() != 'null' &&
+        profile['height'].toString().trim() != 'undefined') {
       _heightController.text = profile['height'].toString().trim();
-    } else if (profile['height_cm'] != null && profile['height_cm'].toString().trim().isNotEmpty) {
+    } else if (profile['height_cm'] != null &&
+        profile['height_cm'].toString().trim().isNotEmpty &&
+        profile['height_cm'].toString().trim() != 'null' &&
+        profile['height_cm'].toString().trim() != 'undefined') {
       _heightController.text = profile['height_cm'].toString().trim();
     }
     if (profile['avatar_url'] != null &&
@@ -379,8 +392,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadExistingData() async {
     try {
-      final dashboard = await _apiService.getDashboard();
-      final profile = dashboard['profile'] as Map<String, dynamic>?;
+      final direct = await _apiService.getProfile();
+      final profile = (direct['profile'] ?? direct['data'] ?? direct) as Map<String, dynamic>?;
       if (profile != null && mounted) {
         setState(() {
           _populateProfileMap(profile);
@@ -781,16 +794,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() => _isLoading = true);
     try {
+      final newWeight = double.tryParse(_weightController.text.trim());
+      final newHeight = double.tryParse(_heightController.text.trim());
       await _apiService.updateProfile(
         fullName: _nameController.text.trim(),
         gender: _selectedGender,
         dateOfBirth: _dobController.text.isNotEmpty ? _dobController.text.trim() : null,
         bloodGroup: _selectedBloodGroup,
-        weightKg: double.tryParse(_weightController.text.trim()),
-        heightCm: double.tryParse(_heightController.text.trim()),
+        weightKg: newWeight,
+        heightCm: newHeight,
         avatarUrl: _avatarUrl,
       );
 
+      if (HealthCacheManager.dashboardData != null &&
+          HealthCacheManager.dashboardData!['profile'] is Map) {
+        final Map<String, dynamic> prof =
+            HealthCacheManager.dashboardData!['profile'] as Map<String, dynamic>;
+        prof['full_name'] = _nameController.text.trim();
+        prof['gender'] = _selectedGender;
+        prof['date_of_birth'] = _dobController.text.trim();
+        prof['blood_group'] = _selectedBloodGroup;
+        if (newWeight != null) {
+          prof['weight_kg'] = newWeight;
+          prof['weight'] = newWeight;
+        }
+        if (newHeight != null) {
+          prof['height_cm'] = newHeight;
+          prof['height'] = newHeight;
+        }
+        if (_avatarUrl != null) prof['avatar_url'] = _avatarUrl;
+      }
       HealthCacheManager.invalidate();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
