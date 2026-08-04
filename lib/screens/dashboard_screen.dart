@@ -159,9 +159,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _contactsFuture = _apiService.getEmergencyContacts();
-    // Instant local state - ZERO loading spinner on app launch or dashboard visit
     _dashboardData = _cachedDashboardData ?? HealthCacheManager.dashboardData ?? _getFallbackDashboardData();
-    _fetchDashboardData();
+    _fetchDashboardData(force: true);
   }
 
   Future<void> _fetchDashboardData({bool force = false}) async {
