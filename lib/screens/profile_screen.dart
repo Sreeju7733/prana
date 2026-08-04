@@ -99,194 +99,225 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _pickAvatarImage() async {
     final urlController = TextEditingController();
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
+      builder: (dialogCtx) {
         return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              backgroundColor: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Choose Profile Photo',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Color(0xFF0F172A)),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 20),
+                            onPressed: () => Navigator.pop(dialogCtx),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Option 1: Native Camera & Gallery
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                side: const BorderSide(color: Color(0xFF0D9488)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: () async {
+                                Navigator.pop(dialogCtx);
+                                await _selectAndUploadImage(ImageSource.gallery);
+                              },
+                              icon: const Icon(Icons.photo_library_outlined,
+                                  color: Color(0xFF0D9488), size: 20),
+                              label: const Text('Gallery',
+                                  style: TextStyle(
+                                      color: Color(0xFF0D9488),
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0D9488),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: () async {
+                                Navigator.pop(dialogCtx);
+                                await _selectAndUploadImage(ImageSource.camera);
+                              },
+                              icon: const Icon(Icons.camera_alt_outlined,
+                                  color: Colors.white, size: 20),
+                              label: const Text('Camera',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Option 2: Quick Presets Grid
                       const Text(
-                        'Choose Profile Photo',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0F172A)),
+                        'OR SELECT AN AVATAR PRESET',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF64748B),
+                            letterSpacing: 0.8),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 20),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Option 1: Native Camera & Gallery
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            side: const BorderSide(color: Color(0xFF0D9488)),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          onPressed: () async {
-                            Navigator.pop(ctx);
-                            await _selectAndUploadImage(ImageSource.gallery);
-                          },
-                          icon: const Icon(Icons.photo_library_outlined, color: Color(0xFF0D9488), size: 20),
-                          label: const Text('Gallery', style: TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0D9488),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          onPressed: () async {
-                            Navigator.pop(ctx);
-                            await _selectAndUploadImage(ImageSource.camera);
-                          },
-                          icon: const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 20),
-                          label: const Text('Camera', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Option 2: Quick Presets Grid
-                  const Text(
-                    'OR SELECT AN AVATAR PRESET',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B), letterSpacing: 0.8),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 60,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _presetAvatars.length,
-                      itemBuilder: (context, idx) {
-                        final avatar = _presetAvatars[idx];
-                        return GestureDetector(
-                          onTap: () async {
-                            Navigator.pop(ctx);
-                            setState(() => _isUploadingAvatar = true);
-                            try {
-                              final updatedUrl = await _apiService.uploadAvatarBase64(avatar);
-                              if (mounted) {
-                                setState(() {
-                                  _avatarUrl = updatedUrl;
-                                  _isUploadingAvatar = false;
-                                });
-                                ScaffoldMessenger.of(this.context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Avatar updated successfully!'),
-                                    backgroundColor: Color(0xFF0D9488),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 64,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _presetAvatars.length,
+                          itemBuilder: (context, idx) {
+                            final avatar = _presetAvatars[idx];
+                            return GestureDetector(
+                              onTap: () async {
+                                Navigator.pop(dialogCtx);
+                                setState(() => _isUploadingAvatar = true);
+                                try {
+                                  final updatedUrl =
+                                      await _apiService.uploadAvatarBase64(avatar);
+                                  if (mounted) {
+                                    setState(() {
+                                      _avatarUrl = updatedUrl;
+                                      _isUploadingAvatar = false;
+                                    });
+                                    ScaffoldMessenger.of(this.context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'Avatar updated successfully!'),
+                                        backgroundColor: Color(0xFF0D9488),
+                                      ),
+                                    );
+                                  }
+                                } catch (_) {
+                                  if (mounted) {
+                                    setState(() {
+                                      _avatarUrl = avatar;
+                                      _isUploadingAvatar = false;
+                                    });
+                                  }
+                                }
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(right: 12),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: _avatarUrl == avatar
+                                        ? const Color(0xFF0D9488)
+                                        : Colors.transparent,
+                                    width: 2.5,
                                   ),
-                                );
-                              }
-                            } catch (_) {
-                              if (mounted) {
-                                setState(() {
-                                  _avatarUrl = avatar;
-                                  _isUploadingAvatar = false;
-                                });
-                              }
-                            }
+                                ),
+                                child: CircleAvatar(
+                                  radius: 28,
+                                  backgroundImage: NetworkImage(avatar),
+                                ),
+                              ),
+                            );
                           },
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 12),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: _avatarUrl == avatar ? const Color(0xFF0D9488) : Colors.transparent,
-                                width: 2.5,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Option 3: Image URL Input
+                      const Text(
+                        'OR PASTE IMAGE URL',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF64748B),
+                            letterSpacing: 0.8),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: urlController,
+                              decoration: InputDecoration(
+                                hintText: 'https://example.com/photo.jpg',
+                                hintStyle: const TextStyle(fontSize: 12),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 10),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12)),
                               ),
                             ),
-                            child: CircleAvatar(
-                              radius: 26,
-                              backgroundImage: NetworkImage(avatar),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0F172A),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Option 3: Image URL Input
-                  const Text(
-                    'OR PASTE IMAGE URL',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B), letterSpacing: 0.8),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: urlController,
-                          decoration: InputDecoration(
-                            hintText: 'https://example.com/photo.jpg',
-                            hintStyle: const TextStyle(fontSize: 12),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0F172A),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () async {
-                          final text = urlController.text.trim();
-                          if (text.isNotEmpty) {
-                            Navigator.pop(ctx);
-                            setState(() => _isUploadingAvatar = true);
-                            try {
-                              final updatedUrl = await _apiService.uploadAvatarBase64(text);
-                              if (mounted) {
-                                setState(() {
-                                  _avatarUrl = updatedUrl;
-                                  _isUploadingAvatar = false;
-                                });
+                            onPressed: () async {
+                              final text = urlController.text.trim();
+                              if (text.isNotEmpty) {
+                                Navigator.pop(dialogCtx);
+                                setState(() => _isUploadingAvatar = true);
+                                try {
+                                  final updatedUrl =
+                                      await _apiService.uploadAvatarBase64(text);
+                                  if (mounted) {
+                                    setState(() {
+                                      _avatarUrl = text;
+                                      _isUploadingAvatar = false;
+                                    });
+                                  }
+                                } catch (_) {
+                                  if (mounted) {
+                                    setState(() {
+                                      _avatarUrl = text;
+                                      _isUploadingAvatar = false;
+                                    });
+                                  }
+                                }
                               }
-                            } catch (_) {
-                              if (mounted) {
-                                setState(() {
-                                  _avatarUrl = text;
-                                  _isUploadingAvatar = false;
-                                });
-                              }
-                            }
-                          }
-                        },
-                        child: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            },
+                            child: const Text('Save',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             );
           },
