@@ -129,8 +129,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 final allergies = snapshot.data != null ? snapshot.data![0] as List : [];
                 final medications = snapshot.data != null ? snapshot.data![1] as List : [];
                 final contacts = snapshot.data != null ? snapshot.data![2] as List : [];
-                final fullProfile = snapshot.data != null && snapshot.data!.length > 3 && snapshot.data![3] is Map
-                    ? (snapshot.data![3]['data'] ?? snapshot.data![3])
+                final rawProfileRes = snapshot.data != null && snapshot.data!.length > 3 && snapshot.data![3] is Map
+                    ? snapshot.data![3] as Map
+                    : null;
+                final fullProfile = rawProfileRes != null
+                    ? (rawProfileRes['profile'] ?? rawProfileRes['data'] ?? rawProfileRes)
                     : null;
                 final conditions = snapshot.data != null && snapshot.data!.length > 4 ? snapshot.data![4] as List : [];
                 final surgeries = snapshot.data != null && snapshot.data!.length > 5 ? snapshot.data![5] as List : [];
@@ -170,15 +173,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('PRANA EMERGENCY BRIEFING', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A), letterSpacing: 0.5)),
+                          const Expanded(
+                            child: Text(
+                              'PRANA EMERGENCY BRIEFING',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF0F172A), letterSpacing: 0.2),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFEF3C7),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(color: const Color(0xFFF59E0B)),
                             ),
-                            child: const Text('PARAMEDIC FULL BRIEFING', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFFB45309))),
+                            child: const Text(
+                              'PARAMEDIC FULL BRIEFING',
+                              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFFB45309)),
+                            ),
                           ),
                         ],
                       ),

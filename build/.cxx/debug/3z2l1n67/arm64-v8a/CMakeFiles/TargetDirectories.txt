@@ -1,2 +1,0 @@
-/home/sreeju/AndroidStudioProjects/prana/build/.cxx/debug/3z2l1n67/arm64-v8a/CMakeFiles/edit_cache.dir
-/home/sreeju/AndroidStudioProjects/prana/build/.cxx/debug/3z2l1n67/arm64-v8a/CMakeFiles/rebuild_cache.dir

@@ -1,4 +1,0 @@
-/home/sreeju/Android/Sdk/cmake/3.22.1/bin/ninja \
-  -C \
-  /home/sreeju/.pub-cache/hosted/pub.dev/jni-1.0.2/android/.cxx/Debug/1w2k3m4c/arm64-v8a \
-  jni
