@@ -1215,12 +1215,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onPressed: () async {
                         if (nameController.text.trim().isEmpty || phoneController.text.trim().isEmpty) return;
                         try {
-                          await _apiService.addEmergencyContact({
+                          final payload = {
                             'name': nameController.text.trim(),
                             'relationship': selectedRelationship,
                             'phone': phoneController.text.trim(),
                             'is_primary': true,
-                          });
+                          };
+                          if (contact != null && contact['id'] != null) {
+                            await _apiService.updateEmergencyContact(contact['id'].toString(), payload);
+                          } else {
+                            await _apiService.addEmergencyContact(payload);
+                          }
+                          _cachedEmergencyModalPayload = null;
+                          HealthCacheManager.isDirty = true;
                           if (context.mounted) {
                             Navigator.pop(ctx);
                             setState(() {});

@@ -676,6 +676,25 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> updateEmergencyContact(String id, Map<String, dynamic> contactData) async {
+    final token = await StorageService().getToken();
+    final response = await http.put(
+      Uri.parse('$baseUrl/api/emergency-contacts/$id'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(contactData),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to update emergency contact');
+    }
+  }
+
   Future<void> deleteEmergencyContact(String id) async {
     final token = await StorageService().getToken();
     final response = await http.delete(
