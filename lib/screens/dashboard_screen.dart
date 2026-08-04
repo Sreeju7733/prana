@@ -952,7 +952,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 12),
               FutureBuilder<List<dynamic>>(
-                future: _apiService.getEmergencyContacts(),
+                future: _contactsFuture ??= _apiService.getEmergencyContacts(),
                 builder: (context, snapshot) {
                   final contacts = snapshot.data ?? [];
                   if (snapshot.connectionState == ConnectionState.waiting && contacts.isEmpty) {
@@ -1063,7 +1063,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 if (contactId.isNotEmpty) {
                                   try {
                                     await _apiService.deleteEmergencyContact(contactId);
-                                    setState(() {});
+                                    _refreshContacts();
                                   } catch (_) {}
                                 }
                               },
@@ -1240,7 +1240,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           HealthCacheManager.isDirty = true;
                           if (context.mounted) {
                             Navigator.pop(ctx);
-                            setState(() {});
+                            _refreshContacts();
                           }
                         } catch (_) {
                           if (context.mounted) Navigator.pop(ctx);
