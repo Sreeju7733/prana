@@ -42,10 +42,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    // Pre-fill from cache immediately for instant display
     final cached = HealthCacheManager.dashboardData?['profile'] as Map<String, dynamic>?;
     if (cached != null) {
       _populateProfileMap(cached);
     }
+    // Always load fresh data from server to show latest changes
     _loadExistingData();
   }
 
@@ -110,10 +112,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&auto=format&fit=crop&q=80',
   ];
 
-  Future<void> _pickAvatarImage() async {
+  void _pickAvatarImage() {
     final urlController = TextEditingController();
+    final BuildContext dialogContext = context;
     showDialog(
-      context: context,
+      context: dialogContext,
       builder: (dialogCtx) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -392,8 +395,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadExistingData() async {
     try {
+      // Always force fresh from server — never serve stale cache
       final direct = await _apiService.getProfile();
-      final profile = (direct['profile'] ?? direct['data'] ?? direct) as Map<String, dynamic>?;
+      final profile = (direct['profile'] ?? direct['data']) as Map<String, dynamic>?;
       if (profile != null && mounted) {
         setState(() {
           _populateProfileMap(profile);

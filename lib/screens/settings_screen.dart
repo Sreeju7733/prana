@@ -28,13 +28,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadProfile() async {
     try {
-      final dashboard = await _apiService.getDashboard(forceRefresh: true);
-      final profile = dashboard['profile'] as Map<String, dynamic>?;
-      if (profile != null && mounted) {
-        _applyProfileData(profile);
-      }
+      // Always fetch fresh data from server to reflect latest edits
       final direct = await _apiService.getProfile();
-      final directProf = direct['profile'] as Map<String, dynamic>?;
+      final directProf = (direct['profile'] ?? direct['data']) as Map<String, dynamic>?;
       if (directProf != null && mounted) {
         _applyProfileData(directProf);
       }
