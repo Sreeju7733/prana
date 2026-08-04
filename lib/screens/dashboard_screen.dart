@@ -164,10 +164,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _fetchDashboardData({bool force = false}) async {
-    // ZERO API CALLS when cache is clean
-    if (!force && !HealthCacheManager.isDirty && HealthCacheManager.dashboardData != null) {
-      return;
-    }
     try {
       final res = await _apiService.getDashboard(forceRefresh: force);
       if (mounted) {
@@ -178,7 +174,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _dashboardData = res;
         });
       }
-    } catch (_) {}
+    } catch (_) {
+      try {
+        final meds = await _apiService.getMedications(forceRefresh: force);
+        final allergies = await _apiService.getAllergies(forceRefresh: force);
+        if (mounted) {
+          setState(() {
+            _dashboardData ??= _getFallbackDashboardData();
+            _dashboardData!['health_summary'] = _dashboardData!['health_summary'] ?? {};
+            _dashboardData!['health_summary']['meds_count'] = meds.length;
+            _dashboardData!['health_summary']['allergies_count'] = allergies.length;
+            final critical = allergies.firstWhere(
+              (a) => a['is_critical'] == true || (a['severity']?.toString().toLowerCase().contains('severe') ?? false),
+              orElse: () => null,
+            );
+            if (critical != null) {
+              _dashboardData!['health_summary']['critical_allergy'] = {
+                'allergen': critical['allergen'],
+                'severity': critical['severity'] ?? 'Severe'
+              };
+            }
+          });
+        }
+      } catch (_) {}
+    }
   }
 
   String _getUserFirstName() {
