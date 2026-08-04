@@ -165,39 +165,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _fetchDashboardData({bool force = false}) async {
     try {
-      final res = await _apiService.getDashboard(forceRefresh: force);
+      final results = await Future.wait([
+        _apiService.getDashboard(forceRefresh: force).catchError((_) => <String, dynamic>{}),
+        _apiService.getMedications(forceRefresh: force).catchError((_) => <dynamic>[]),
+        _apiService.getAllergies(forceRefresh: force).catchError((_) => <dynamic>[]),
+        _apiService.getConditions().catchError((_) => <dynamic>[]),
+      ]);
+
+      final dashRes = results[0] as Map<String, dynamic>;
+      final medsList = results[1] as List<dynamic>;
+      final allergiesList = results[2] as List<dynamic>;
+      final conditionsList = results[3] as List<dynamic>;
+
+      final Map<String, dynamic> merged = Map<String, dynamic>.from(dashRes.isNotEmpty ? dashRes : _getFallbackDashboardData());
+
+      merged['health_summary'] = Map<String, dynamic>.from(merged['health_summary'] ?? {});
+      final healthSummary = merged['health_summary'] as Map<String, dynamic>;
+
+      final int actualMedsCount = medsList.isNotEmpty ? medsList.length : (healthSummary['meds_count'] ?? 0);
+      final int actualAllergiesCount = allergiesList.isNotEmpty ? allergiesList.length : (healthSummary['allergies_count'] ?? 0);
+      final int actualConditionsCount = conditionsList.isNotEmpty ? conditionsList.length : (healthSummary['conditions_count'] ?? 0);
+
+      healthSummary['meds_count'] = actualMedsCount;
+      healthSummary['allergies_count'] = actualAllergiesCount;
+      healthSummary['conditions_count'] = actualConditionsCount;
+
+      final critical = allergiesList.firstWhere(
+        (a) => a['is_critical'] == true || (a['severity']?.toString().toLowerCase().contains('severe') ?? false),
+        orElse: () => null,
+      );
+
+      if (critical != null) {
+        healthSummary['critical_allergy'] = {
+          'allergen': critical['allergen'],
+          'severity': critical['severity'] ?? 'Severe',
+        };
+      }
+
+      merged['health_summary'] = healthSummary;
+
+      if (merged['profile'] != null) {
+        final profile = Map<String, dynamic>.from(merged['profile']);
+        if (actualAllergiesCount > 0) {
+          profile['no_known_allergies'] = false;
+          profile['allergies_recorded'] = true;
+        }
+        merged['profile'] = profile;
+      }
+
       if (mounted) {
-        _cachedDashboardData = res;
-        HealthCacheManager.dashboardData = res;
+        _cachedDashboardData = merged;
+        HealthCacheManager.dashboardData = merged;
         HealthCacheManager.isDirty = false;
         setState(() {
-          _dashboardData = res;
+          _dashboardData = merged;
         });
       }
-    } catch (_) {
-      try {
-        final meds = await _apiService.getMedications(forceRefresh: force);
-        final allergies = await _apiService.getAllergies(forceRefresh: force);
-        if (mounted) {
-          setState(() {
-            _dashboardData ??= _getFallbackDashboardData();
-            _dashboardData!['health_summary'] = _dashboardData!['health_summary'] ?? {};
-            _dashboardData!['health_summary']['meds_count'] = meds.length;
-            _dashboardData!['health_summary']['allergies_count'] = allergies.length;
-            final critical = allergies.firstWhere(
-              (a) => a['is_critical'] == true || (a['severity']?.toString().toLowerCase().contains('severe') ?? false),
-              orElse: () => null,
-            );
-            if (critical != null) {
-              _dashboardData!['health_summary']['critical_allergy'] = {
-                'allergen': critical['allergen'],
-                'severity': critical['severity'] ?? 'Severe'
-              };
-            }
-          });
-        }
-      } catch (_) {}
-    }
+    } catch (_) {}
   }
 
   String _getUserFirstName() {
