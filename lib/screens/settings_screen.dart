@@ -37,6 +37,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (_) {}
   }
 
+  void _openEditProfile() {
+    final Map<String, dynamic> currentProfData = {
+      'full_name': _userName,
+      'blood_group': _bloodGroup,
+      'date_of_birth': _dob,
+      'gender': _gender,
+      'weight': _weight,
+      'weight_kg': _weight,
+      'height': _height,
+      'height_cm': _height,
+      'avatar_url': _avatarUrl,
+    };
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProfileScreen(
+          isEditMode: true,
+          initialProfileData: currentProfData,
+        ),
+      ),
+    ).then((_) => _loadProfile());
+  }
+
+  double? _parseNumeric(dynamic val) {
+    if (val == null) return null;
+    final str = val.toString().trim();
+    if (str.isEmpty || str == 'null' || str == 'undefined') return null;
+    final cleaned = str.replaceAll(RegExp(r'[^0-9.]'), '');
+    return double.tryParse(cleaned);
+  }
+
   void _applyProfileData(Map<String, dynamic> profile) {
     setState(() {
       if (profile['full_name'] != null && profile['full_name'].toString().trim().isNotEmpty && profile['full_name'].toString().trim() != 'undefined') {
@@ -58,15 +89,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final g = profile['gender'].toString().trim().toUpperCase();
         _gender = (g == 'M' || g == 'MALE') ? 'Male' : ((g == 'F' || g == 'FEMALE') ? 'Female' : g);
       }
-      if (profile['weight'] != null && profile['weight'].toString().trim().isNotEmpty && profile['weight'].toString().trim() != 'undefined' && profile['weight'].toString().trim() != 'null') {
-        _weight = '${profile['weight']} kg';
-      } else if (profile['weight_kg'] != null && profile['weight_kg'].toString().trim().isNotEmpty && profile['weight_kg'].toString().trim() != 'undefined' && profile['weight_kg'].toString().trim() != 'null') {
-        _weight = '${profile['weight_kg']} kg';
+      final wVal = profile['weight_kg'] ?? profile['weight'];
+      if (wVal != null) {
+        final parsedW = _parseNumeric(wVal);
+        if (parsedW != null) {
+          _weight = parsedW % 1 == 0 ? '${parsedW.toInt()} kg' : '$parsedW kg';
+        }
       }
-      if (profile['height'] != null && profile['height'].toString().trim().isNotEmpty && profile['height'].toString().trim() != 'undefined' && profile['height'].toString().trim() != 'null') {
-        _height = '${profile['height']} cm';
-      } else if (profile['height_cm'] != null && profile['height_cm'].toString().trim().isNotEmpty && profile['height_cm'].toString().trim() != 'undefined' && profile['height_cm'].toString().trim() != 'null') {
-        _height = '${profile['height_cm']} cm';
+      final hVal = profile['height_cm'] ?? profile['height'];
+      if (hVal != null) {
+        final parsedH = _parseNumeric(hVal);
+        if (parsedH != null) {
+          _height = parsedH % 1 == 0 ? '${parsedH.toInt()} cm' : '$parsedH cm';
+        }
       }
       if (profile['avatar_url'] != null && profile['avatar_url'].toString().trim().isNotEmpty && profile['avatar_url'].toString().trim() != 'undefined') {
         _avatarUrl = profile['avatar_url'].toString().trim();
@@ -105,27 +140,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Row(
                     children: [
-                      ClipOval(
-                        child: Container(
-                          width: 52,
-                          height: 52,
-                          color: theme.primaryColor.withValues(alpha: 0.1),
-                          child: (_avatarUrl != null && _avatarUrl!.isNotEmpty)
-                              ? (_avatarUrl!.startsWith('data:image')
-                                  ? Image.memory(
-                                      base64Decode(_avatarUrl!.split(',').last),
-                                      fit: BoxFit.cover,
-                                      width: 52,
-                                      height: 52,
-                                    )
-                                  : Image.network(
-                                      _avatarUrl!,
-                                      fit: BoxFit.cover,
-                                      width: 52,
-                                      height: 52,
-                                      errorBuilder: (_, __, ___) => Icon(Icons.person, color: theme.primaryColor, size: 28),
-                                    ))
-                              : Icon(Icons.person, color: theme.primaryColor, size: 28),
+                      GestureDetector(
+                        onTap: _openEditProfile,
+                        child: Stack(
+                          children: [
+                            ClipOval(
+                              child: Container(
+                                width: 56,
+                                height: 56,
+                                color: theme.primaryColor.withValues(alpha: 0.1),
+                                child: (_avatarUrl != null && _avatarUrl!.isNotEmpty)
+                                    ? (_avatarUrl!.startsWith('data:image')
+                                        ? Image.memory(
+                                            base64Decode(_avatarUrl!.split(',').last),
+                                            fit: BoxFit.cover,
+                                            width: 56,
+                                            height: 56,
+                                          )
+                                        : Image.network(
+                                            _avatarUrl!,
+                                            fit: BoxFit.cover,
+                                            width: 56,
+                                            height: 56,
+                                            errorBuilder: (_, __, ___) => Icon(Icons.person, color: theme.primaryColor, size: 28),
+                                          ))
+                                    : Icon(Icons.person, color: theme.primaryColor, size: 28),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: theme.primaryColor,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 1.5),
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.white,
+                                  size: 11,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 14),
@@ -140,9 +199,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen(isEditMode: true))).then((_) => _loadProfile());
-                        },
+                        onTap: _openEditProfile,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(

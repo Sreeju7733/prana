@@ -7,7 +7,8 @@ import '../services/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool isEditMode;
-  const ProfileScreen({super.key, this.isEditMode = false});
+  final Map<String, dynamic>? initialProfileData;
+  const ProfileScreen({super.key, this.isEditMode = false, this.initialProfileData});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -42,13 +43,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill from cache immediately for instant display
-    final cached = HealthCacheManager.dashboardData?['profile'] as Map<String, dynamic>?;
-    if (cached != null) {
-      _populateProfileMap(cached);
+    // 1. Pre-fill from explicitly provided caller map immediately
+    if (widget.initialProfileData != null) {
+      _populateProfileMap(widget.initialProfileData!);
+    } else {
+      // 2. Pre-fill from in-memory cache for zero-latency instant rendering
+      final cached = HealthCacheManager.dashboardData?['profile'] as Map<String, dynamic>?;
+      if (cached != null) {
+        _populateProfileMap(cached);
+      }
     }
-    // Always load fresh data from server to show latest changes
+    // 3. Load fresh data from server in background
     _loadExistingData();
+  }
+
+  double? _parseNumeric(dynamic val) {
+    if (val == null) return null;
+    final str = val.toString().trim();
+    if (str.isEmpty || str == 'null' || str == 'undefined') return null;
+    final cleaned = str.replaceAll(RegExp(r'[^0-9.]'), '');
+    return double.tryParse(cleaned);
   }
 
   void _populateProfileMap(Map<String, dynamic> profile) {
@@ -61,40 +75,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
         profile['date_of_birth'].toString().trim().isNotEmpty &&
         profile['date_of_birth'].toString().trim() != 'undefined') {
       final rawDob = profile['date_of_birth'].toString().trim().split('T').first;
-      _dobController.text = rawDob;
+      if (rawDob.contains('/')) {
+        final parts = rawDob.split('/');
+        if (parts.length == 3) {
+          _dobController.text = '${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}';
+        } else {
+          _dobController.text = rawDob;
+        }
+      } else {
+        _dobController.text = rawDob;
+      }
     }
     if (profile['gender'] != null) {
       final g = profile['gender'].toString().trim().toUpperCase();
       _selectedGender = (g == 'MALE' || g == 'M')
           ? 'M'
-          : ((g == 'FEMALE' || g == 'F') ? 'F' : 'O');
+          : ((g == 'FEMALE' || g == 'F') ? 'F' : 'Other');
     }
     if (profile['blood_group'] != null &&
         _bloodGroups.contains(profile['blood_group'].toString().trim())) {
       _selectedBloodGroup = profile['blood_group'].toString().trim();
     }
-    if (profile['weight'] != null &&
-        profile['weight'].toString().trim().isNotEmpty &&
-        profile['weight'].toString().trim() != 'null' &&
-        profile['weight'].toString().trim() != 'undefined') {
-      _weightController.text = profile['weight'].toString().trim();
-    } else if (profile['weight_kg'] != null &&
-        profile['weight_kg'].toString().trim().isNotEmpty &&
-        profile['weight_kg'].toString().trim() != 'null' &&
-        profile['weight_kg'].toString().trim() != 'undefined') {
-      _weightController.text = profile['weight_kg'].toString().trim();
+    final wVal = profile['weight_kg'] ?? profile['weight'];
+    if (wVal != null) {
+      final parsedW = _parseNumeric(wVal);
+      if (parsedW != null) {
+        _weightController.text = parsedW % 1 == 0 ? parsedW.toInt().toString() : parsedW.toString();
+      }
     }
 
-    if (profile['height'] != null &&
-        profile['height'].toString().trim().isNotEmpty &&
-        profile['height'].toString().trim() != 'null' &&
-        profile['height'].toString().trim() != 'undefined') {
-      _heightController.text = profile['height'].toString().trim();
-    } else if (profile['height_cm'] != null &&
-        profile['height_cm'].toString().trim().isNotEmpty &&
-        profile['height_cm'].toString().trim() != 'null' &&
-        profile['height_cm'].toString().trim() != 'undefined') {
-      _heightController.text = profile['height_cm'].toString().trim();
+    final hVal = profile['height_cm'] ?? profile['height'];
+    if (hVal != null) {
+      final parsedH = _parseNumeric(hVal);
+      if (parsedH != null) {
+        _heightController.text = parsedH % 1 == 0 ? parsedH.toInt().toString() : parsedH.toString();
+      }
     }
     if (profile['avatar_url'] != null &&
         profile['avatar_url'].toString().trim().isNotEmpty &&
@@ -114,229 +129,255 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _pickAvatarImage() {
     final urlController = TextEditingController();
-    final BuildContext dialogContext = context;
-    showDialog(
-      context: dialogContext,
-      builder: (dialogCtx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              backgroundColor: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Choose Profile Photo',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: Color(0xFF0F172A)),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close, size: 20),
-                            onPressed: () => Navigator.pop(dialogCtx),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Option 1: Native Camera & Gallery
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                side: const BorderSide(color: Color(0xFF0D9488)),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                              ),
-                              onPressed: () async {
-                                Navigator.pop(dialogCtx);
-                                await _selectAndUploadImage(ImageSource.gallery);
-                              },
-                              icon: const Icon(Icons.photo_library_outlined,
-                                  color: Color(0xFF0D9488), size: 20),
-                              label: const Text('Gallery',
-                                  style: TextStyle(
-                                      color: Color(0xFF0D9488),
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0D9488),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                              ),
-                              onPressed: () async {
-                                Navigator.pop(dialogCtx);
-                                await _selectAndUploadImage(ImageSource.camera);
-                              },
-                              icon: const Icon(Icons.camera_alt_outlined,
-                                  color: Colors.white, size: 20),
-                              label: const Text('Camera',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Option 2: Quick Presets Grid
-                      const Text(
-                        'OR SELECT AN AVATAR PRESET',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF64748B),
-                            letterSpacing: 0.8),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: 64,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _presetAvatars.length,
-                          itemBuilder: (context, idx) {
-                            final avatar = _presetAvatars[idx];
-                            return GestureDetector(
-                              onTap: () async {
-                                Navigator.pop(dialogCtx);
-                                setState(() => _isUploadingAvatar = true);
-                                try {
-                                  final updatedUrl =
-                                      await _apiService.uploadAvatarBase64(avatar);
-                                  if (mounted) {
-                                    setState(() {
-                                      _avatarUrl = updatedUrl;
-                                      _isUploadingAvatar = false;
-                                    });
-                                    ScaffoldMessenger.of(this.context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            'Avatar updated successfully!'),
-                                        backgroundColor: Color(0xFF0D9488),
-                                      ),
-                                    );
-                                  }
-                                } catch (_) {
-                                  if (mounted) {
-                                    setState(() {
-                                      _avatarUrl = avatar;
-                                      _isUploadingAvatar = false;
-                                    });
-                                  }
-                                }
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 12),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: _avatarUrl == avatar
-                                        ? const Color(0xFF0D9488)
-                                        : Colors.transparent,
-                                    width: 2.5,
-                                  ),
-                                ),
-                                child: CircleAvatar(
-                                  radius: 28,
-                                  backgroundImage: NetworkImage(avatar),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-
-                      // Option 3: Image URL Input
-                      const Text(
-                        'OR PASTE IMAGE URL',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF64748B),
-                            letterSpacing: 0.8),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: urlController,
-                              decoration: InputDecoration(
-                                hintText: 'https://example.com/photo.jpg',
-                                hintStyle: const TextStyle(fontSize: 12),
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 10),
-                                border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0F172A),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                            ),
-                            onPressed: () async {
-                              final text = urlController.text.trim();
-                              if (text.isNotEmpty) {
-                                Navigator.pop(dialogCtx);
-                                setState(() => _isUploadingAvatar = true);
-                                try {
-                                  final updatedUrl =
-                                      await _apiService.uploadAvatarBase64(text);
-                                  if (mounted) {
-                                    setState(() {
-                                      _avatarUrl = updatedUrl;
-                                      _isUploadingAvatar = false;
-                                    });
-                                  }
-                                } catch (_) {
-                                  if (mounted) {
-                                    setState(() {
-                                      _avatarUrl = text;
-                                      _isUploadingAvatar = false;
-                                    });
-                                  }
-                                }
-                              }
-                            },
-                            child: const Text('Save',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold)),
-                          ),
-                        ],
-                      ),
-                    ],
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalCtx) {
+        return Container(
+          padding: EdgeInsets.only(
+            top: 20,
+            left: 20,
+            right: 20,
+            bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 24,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Choose Profile Photo',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.pop(modalCtx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Option 1: Native Camera & Gallery
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: const BorderSide(color: Color(0xFF0D9488)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(modalCtx);
+                          await _selectAndUploadImage(ImageSource.gallery);
+                        },
+                        icon: const Icon(Icons.photo_library_outlined,
+                            color: Color(0xFF0D9488), size: 20),
+                        label: const Text(
+                          'Gallery',
+                          style: TextStyle(
+                            color: Color(0xFF0D9488),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0D9488),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(modalCtx);
+                          await _selectAndUploadImage(ImageSource.camera);
+                        },
+                        icon: const Icon(Icons.camera_alt_outlined,
+                            color: Colors.white, size: 20),
+                        label: const Text(
+                          'Camera',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Option 2: Quick Presets Grid
+                const Text(
+                  'OR CHOOSE A PRESET AVATAR',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF64748B),
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 64,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _presetAvatars.length,
+                    itemBuilder: (context, idx) {
+                      final avatar = _presetAvatars[idx];
+                      return GestureDetector(
+                        onTap: () async {
+                          Navigator.pop(modalCtx);
+                          setState(() => _isUploadingAvatar = true);
+                          try {
+                            final updatedUrl =
+                                await _apiService.uploadAvatarBase64(avatar);
+                            if (mounted) {
+                              setState(() {
+                                _avatarUrl = updatedUrl;
+                                _isUploadingAvatar = false;
+                              });
+                              ScaffoldMessenger.of(this.context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Avatar updated successfully!'),
+                                  backgroundColor: Color(0xFF0D9488),
+                                ),
+                              );
+                            }
+                          } catch (_) {
+                            if (mounted) {
+                              setState(() {
+                                _avatarUrl = avatar;
+                                _isUploadingAvatar = false;
+                              });
+                            }
+                          }
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 12),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: _avatarUrl == avatar
+                                  ? const Color(0xFF0D9488)
+                                  : Colors.transparent,
+                              width: 2.5,
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 28,
+                            backgroundImage: NetworkImage(avatar),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Option 3: Image URL Input
+                const Text(
+                  'OR PASTE AN IMAGE URL',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF64748B),
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: urlController,
+                        decoration: InputDecoration(
+                          hintText: 'https://example.com/photo.jpg',
+                          hintStyle: const TextStyle(fontSize: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F172A),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () async {
+                        final text = urlController.text.trim();
+                        if (text.isNotEmpty) {
+                          Navigator.pop(modalCtx);
+                          setState(() => _isUploadingAvatar = true);
+                          try {
+                            final updatedUrl =
+                                await _apiService.uploadAvatarBase64(text);
+                            if (mounted) {
+                              setState(() {
+                                _avatarUrl = updatedUrl;
+                                _isUploadingAvatar = false;
+                              });
+                            }
+                          } catch (_) {
+                            if (mounted) {
+                              setState(() {
+                                _avatarUrl = text;
+                                _isUploadingAvatar = false;
+                              });
+                            }
+                          }
+                        }
+                      },
+                      child: const Text(
+                        'Save',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -375,20 +416,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         setState(() => _isUploadingAvatar = false);
         final errStr = e.toString();
-        if (errStr.contains('MissingPluginException')) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please restart the app once to complete photo picker setup. In the meantime, you can pick a preset avatar!'),
-              backgroundColor: Color(0xFFD97706),
-              duration: Duration(seconds: 4),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              errStr.contains('MissingPluginException')
+                  ? 'Please restart the app to complete photo picker setup, or choose a preset avatar!'
+                  : 'Failed to upload photo: ${errStr.replaceAll("Exception: ", "")}',
             ),
-          );
-          _pickAvatarImage();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to upload photo: ${errStr.replaceAll("Exception: ", "")}')),
-          );
-        }
+            backgroundColor: errStr.contains('MissingPluginException') ? const Color(0xFFD97706) : Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     }
   }
@@ -703,8 +741,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         dateOfBirth:
             _dobController.text.isNotEmpty ? _dobController.text.trim() : null,
         bloodGroup: _selectedBloodGroup,
-        weightKg: double.tryParse(_weightController.text.trim()),
-        heightCm: double.tryParse(_heightController.text.trim()),
+        weightKg: _parseNumeric(_weightController.text),
+        heightCm: _parseNumeric(_heightController.text),
         avatarUrl: _avatarUrl,
       );
 
@@ -798,8 +836,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final newWeight = double.tryParse(_weightController.text.trim());
-      final newHeight = double.tryParse(_heightController.text.trim());
+      final newWeight = _parseNumeric(_weightController.text);
+      final newHeight = _parseNumeric(_heightController.text);
       await _apiService.updateProfile(
         fullName: _nameController.text.trim(),
         gender: _selectedGender,

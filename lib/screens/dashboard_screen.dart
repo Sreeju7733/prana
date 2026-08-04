@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import 'prescription_scanner_screen.dart';
+import 'profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Function(int tabIndex, {int subTabIndex, bool openAddModal})?
@@ -454,39 +455,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     ),
                                     child: Row(
                                       children: [
-                                        ClipOval(
-                                          child: Container(
-                                            width: 56,
-                                            height: 56,
-                                            color: const Color(0xFF0D9488),
-                                            child: (profile?['avatar_url'] != null && profile!['avatar_url'].toString().trim().isNotEmpty)
-                                                ? (profile['avatar_url'].toString().startsWith('data:image')
-                                                    ? Image.memory(
-                                                        base64Decode(profile['avatar_url'].toString().split(',').last),
-                                                        fit: BoxFit.cover,
-                                                        width: 56,
-                                                        height: 56,
-                                                      )
-                                                    : Image.network(
-                                                        profile['avatar_url'].toString(),
-                                                        fit: BoxFit.cover,
-                                                        width: 56,
-                                                        height: 56,
-                                                        errorBuilder: (_, __, ___) => Center(
-                                                          child: Text(bloodGroup,
-                                                              style: const TextStyle(
-                                                                  color: Colors.white,
-                                                                  fontWeight: FontWeight.bold,
-                                                                  fontSize: 20)),
-                                                        ),
-                                                      ))
-                                                : Center(
-                                                    child: Text(bloodGroup,
-                                                        style: const TextStyle(
-                                                            color: Colors.white,
-                                                            fontWeight: FontWeight.bold,
-                                                            fontSize: 20)),
-                                                  ),
+                                        GestureDetector(
+                                          onTap: () {
+                                            Navigator.pop(context);
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => ProfileScreen(isEditMode: true, initialProfileData: profile != null ? Map<String, dynamic>.from(profile) : null),
+                                              ),
+                                            ).then((_) => _fetchDashboardData(force: true));
+                                          },
+                                          child: ClipOval(
+                                            child: Container(
+                                              width: 56,
+                                              height: 56,
+                                              color: const Color(0xFF0D9488),
+                                              child: (profile?['avatar_url'] != null && profile!['avatar_url'].toString().trim().isNotEmpty)
+                                                  ? (profile['avatar_url'].toString().startsWith('data:image')
+                                                      ? Image.memory(
+                                                          base64Decode(profile['avatar_url'].toString().split(',').last),
+                                                          fit: BoxFit.cover,
+                                                          width: 56,
+                                                          height: 56,
+                                                        )
+                                                      : Image.network(
+                                                          profile['avatar_url'].toString(),
+                                                          fit: BoxFit.cover,
+                                                          width: 56,
+                                                          height: 56,
+                                                          errorBuilder: (_, __, ___) => Center(
+                                                            child: Text(bloodGroup,
+                                                                style: const TextStyle(
+                                                                    color: Colors.white,
+                                                                    fontWeight: FontWeight.bold,
+                                                                    fontSize: 20)),
+                                                          ),
+                                                        ))
+                                                  : Center(
+                                                      child: Text(bloodGroup,
+                                                          style: const TextStyle(
+                                                              color: Colors.white,
+                                                              fontWeight: FontWeight.bold,
+                                                              fontSize: 20)),
+                                                    ),
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(width: 16),
