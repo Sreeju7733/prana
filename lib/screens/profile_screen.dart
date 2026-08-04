@@ -294,7 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       await _apiService.uploadAvatarBase64(text);
                                   if (mounted) {
                                     setState(() {
-                                      _avatarUrl = text;
+                                      _avatarUrl = updatedUrl;
                                       _isUploadingAvatar = false;
                                     });
                                   }
