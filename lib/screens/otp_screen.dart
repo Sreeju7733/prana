@@ -121,8 +121,12 @@ class _OtpScreenState extends State<OtpScreen> {
       final response = await _apiService.verifyOtp(widget.phoneNumber, code);
       await _storageService.saveToken(response['token']);
 
+      final userObj = response['user'];
+      final String? name = userObj != null ? userObj['full_name']?.toString().trim() : null;
+      final bool isNew = (response['is_new_user'] == true) && (name == null || name.isEmpty || name == 'New User');
+
       if (mounted) {
-        if (response['is_new_user'] == true) {
+        if (isNew) {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => const ProfileScreen()),
