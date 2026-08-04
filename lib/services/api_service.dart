@@ -239,6 +239,7 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode == 200) {
+      HealthCacheManager.invalidate();
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to update allergy');
@@ -251,7 +252,9 @@ class ApiService {
       Uri.parse('$baseUrl/api/allergies/$id'),
       headers: {'Authorization': 'Bearer $token'},
     );
-    if (response.statusCode != 200 && response.statusCode != 204) {
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      HealthCacheManager.invalidate();
+    } else {
       throw Exception('Failed to delete allergy');
     }
   }
@@ -282,6 +285,7 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
+      HealthCacheManager.invalidate();
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to add condition');
@@ -299,6 +303,7 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode == 200) {
+      HealthCacheManager.invalidate();
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to update medication');
@@ -316,6 +321,7 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode == 200) {
+      HealthCacheManager.invalidate();
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to update condition');
@@ -328,7 +334,9 @@ class ApiService {
       Uri.parse('$baseUrl/api/conditions/$id'),
       headers: {'Authorization': 'Bearer $token'},
     );
-    if (response.statusCode != 200 && response.statusCode != 204) {
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      HealthCacheManager.invalidate();
+    } else {
       throw Exception('Failed to delete condition');
     }
   }
@@ -371,6 +379,7 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
+      HealthCacheManager.invalidate();
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to add surgery');
@@ -385,6 +394,7 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode == 200) {
+      HealthCacheManager.invalidate();
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to update surgery');
@@ -393,10 +403,13 @@ class ApiService {
 
   Future<void> deleteSurgery(String id) async {
     final token = await StorageService().getToken();
-    await http.delete(
+    final res = await http.delete(
       Uri.parse('$baseUrl/api/surgeries/$id'),
       headers: {'Authorization': 'Bearer $token'},
     );
+    if (res.statusCode == 200 || res.statusCode == 204) {
+      HealthCacheManager.invalidate();
+    }
   }
 
   // --- IMPLANTED DEVICES ---
@@ -422,6 +435,7 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
+      HealthCacheManager.invalidate();
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to add device');
@@ -436,6 +450,7 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode == 200) {
+      HealthCacheManager.invalidate();
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to update device');
@@ -444,10 +459,13 @@ class ApiService {
 
   Future<void> deleteDevice(String id) async {
     final token = await StorageService().getToken();
-    await http.delete(
+    final res = await http.delete(
       Uri.parse('$baseUrl/api/devices/$id'),
       headers: {'Authorization': 'Bearer $token'},
     );
+    if (res.statusCode == 200 || res.statusCode == 204) {
+      HealthCacheManager.invalidate();
+    }
   }
 
   Future<Map<String, dynamic>> logVital(Map<String, dynamic> data) async {
@@ -461,6 +479,7 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
+      HealthCacheManager.invalidate();
       return jsonDecode(response.body);
     } else {
       final res = jsonDecode(response.body);
@@ -479,6 +498,7 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode == 200) {
+      HealthCacheManager.invalidate();
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to update vital');
@@ -491,7 +511,9 @@ class ApiService {
       Uri.parse('$baseUrl/api/vitals/$id'),
       headers: {'Authorization': 'Bearer $token'},
     );
-    if (response.statusCode != 200 && response.statusCode != 204) {
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      HealthCacheManager.invalidate();
+    } else {
       throw Exception('Failed to delete vital');
     }
   }

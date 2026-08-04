@@ -851,6 +851,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (HealthCacheManager.isDirty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && HealthCacheManager.isDirty) {
+          _fetchDashboardData(force: true);
+        }
+      });
+    }
+
     final profile = _dashboardData?['profile'];
     final healthSummary = _dashboardData?['health_summary'];
 
