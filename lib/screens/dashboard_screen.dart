@@ -1113,8 +1113,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _showAddOrEditContactModal(BuildContext context, {Map<String, dynamic>? contact}) {
     final nameController = TextEditingController(text: contact?['name'] ?? '');
-    final relController = TextEditingController(text: contact?['relationship'] ?? 'Family');
     final phoneController = TextEditingController(text: contact?['phone'] ?? '');
+
+    const relationshipOptions = [
+      'Spouse / Family',
+      'Parent',
+      'Sibling',
+      'Child',
+      'Doctor',
+      'Friend / Other',
+    ];
+
+    String initialRel = contact?['relationship'] ?? contact?['rel'] ?? 'Spouse / Family';
+    if (!relationshipOptions.contains(initialRel)) {
+      initialRel = 'Spouse / Family';
+    }
+    String selectedRelationship = initialRel;
 
     showModalBottomSheet(
       context: context,
@@ -1122,92 +1136,109 @@ class _DashboardScreenState extends State<DashboardScreen> {
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    contact == null ? 'Add Emergency Contact' : 'Edit Emergency Contact',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        contact == null ? 'Add Emergency Contact' : 'Edit Emergency Contact',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 20),
-                    onPressed: () => Navigator.pop(ctx),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Contact Name',
+                      prefixIcon: const Icon(Icons.person_outline),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: selectedRelationship,
+                    decoration: InputDecoration(
+                      labelText: 'Relationship',
+                      prefixIcon: const Icon(Icons.people_outline),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    items: relationshipOptions.map((rel) {
+                      return DropdownMenuItem<String>(
+                        value: rel,
+                        child: Text(rel),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setModalState(() {
+                          selectedRelationship = val;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: 'Phone Number (+91...)',
+                      prefixIcon: const Icon(Icons.phone_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0D9488),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () async {
+                        if (nameController.text.trim().isEmpty || phoneController.text.trim().isEmpty) return;
+                        try {
+                          await _apiService.addEmergencyContact({
+                            'name': nameController.text.trim(),
+                            'relationship': selectedRelationship,
+                            'phone': phoneController.text.trim(),
+                            'is_primary': true,
+                          });
+                          if (context.mounted) {
+                            Navigator.pop(ctx);
+                            setState(() {});
+                          }
+                        } catch (_) {
+                          if (context.mounted) Navigator.pop(ctx);
+                        }
+                      },
+                      child: Text(
+                        contact == null ? 'Save Emergency Contact' : 'Update Emergency Contact',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: 'Contact Name',
-                  prefixIcon: const Icon(Icons.person_outline),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: relController,
-                decoration: InputDecoration(
-                  labelText: 'Relationship (e.g. Spouse, Father, Doctor)',
-                  prefixIcon: const Icon(Icons.people_outline),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  labelText: 'Phone Number (+91...)',
-                  prefixIcon: const Icon(Icons.phone_outlined),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0D9488),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () async {
-                    if (nameController.text.trim().isEmpty || phoneController.text.trim().isEmpty) return;
-                    try {
-                      await _apiService.addEmergencyContact({
-                        'name': nameController.text.trim(),
-                        'relationship': relController.text.trim(),
-                        'phone': phoneController.text.trim(),
-                        'is_primary': true,
-                      });
-                      if (context.mounted) {
-                        Navigator.pop(ctx);
-                        setState(() {});
-                      }
-                    } catch (_) {
-                      if (context.mounted) Navigator.pop(ctx);
-                    }
-                  },
-                  child: Text(
-                    contact == null ? 'Save Emergency Contact' : 'Update Emergency Contact',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
