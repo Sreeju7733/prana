@@ -127,7 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&auto=format&fit=crop&q=80',
   ];
 
-  void _pickAvatarImage() {
+  Future<void> _pickAvatarImage() async {
     final urlController = TextEditingController();
     showModalBottomSheet(
       context: context,
@@ -1107,7 +1107,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // Profile Avatar Upload Header
           Center(
             child: GestureDetector(
-              onTap: _isUploadingAvatar ? null : _pickAvatarImage,
+              onTap: _isUploadingAvatar
+                  ? null
+                  : () => Future.microtask(_pickAvatarImage),
               child: Stack(
                 children: [
                   Container(
