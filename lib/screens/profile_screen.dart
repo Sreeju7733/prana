@@ -88,44 +88,208 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  final List<String> _presetAvatars = const [
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&auto=format&fit=crop&q=80',
+  ];
+
   Future<void> _pickAvatarImage() async {
+    final urlController = TextEditingController();
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Choose Profile Photo',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A)),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF0D9488)),
-                  title: const Text('Choose from Gallery'),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    await _selectAndUploadImage(ImageSource.gallery);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF0D9488)),
-                  title: const Text('Take a Photo'),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    await _selectAndUploadImage(ImageSource.camera);
-                  },
-                ),
-              ],
-            ),
-          ),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Choose Profile Photo',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0F172A)),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Option 1: Native Camera & Gallery
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: Color(0xFF0D9488)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: () async {
+                            Navigator.pop(ctx);
+                            await _selectAndUploadImage(ImageSource.gallery);
+                          },
+                          icon: const Icon(Icons.photo_library_outlined, color: Color(0xFF0D9488), size: 20),
+                          label: const Text('Gallery', style: TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0D9488),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: () async {
+                            Navigator.pop(ctx);
+                            await _selectAndUploadImage(ImageSource.camera);
+                          },
+                          icon: const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 20),
+                          label: const Text('Camera', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Option 2: Quick Presets Grid
+                  const Text(
+                    'OR SELECT AN AVATAR PRESET',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B), letterSpacing: 0.8),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 60,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _presetAvatars.length,
+                      itemBuilder: (context, idx) {
+                        final avatar = _presetAvatars[idx];
+                        return GestureDetector(
+                          onTap: () async {
+                            Navigator.pop(ctx);
+                            setState(() => _isUploadingAvatar = true);
+                            try {
+                              final updatedUrl = await _apiService.uploadAvatarBase64(avatar);
+                              if (mounted) {
+                                setState(() {
+                                  _avatarUrl = updatedUrl;
+                                  _isUploadingAvatar = false;
+                                });
+                                ScaffoldMessenger.of(this.context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Avatar updated successfully!'),
+                                    backgroundColor: Color(0xFF0D9488),
+                                  ),
+                                );
+                              }
+                            } catch (_) {
+                              if (mounted) {
+                                setState(() {
+                                  _avatarUrl = avatar;
+                                  _isUploadingAvatar = false;
+                                });
+                              }
+                            }
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 12),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: _avatarUrl == avatar ? const Color(0xFF0D9488) : Colors.transparent,
+                                width: 2.5,
+                              ),
+                            ),
+                            child: CircleAvatar(
+                              radius: 26,
+                              backgroundImage: NetworkImage(avatar),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Option 3: Image URL Input
+                  const Text(
+                    'OR PASTE IMAGE URL',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B), letterSpacing: 0.8),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: urlController,
+                          decoration: InputDecoration(
+                            hintText: 'https://example.com/photo.jpg',
+                            hintStyle: const TextStyle(fontSize: 12),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F172A),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () async {
+                          final text = urlController.text.trim();
+                          if (text.isNotEmpty) {
+                            Navigator.pop(ctx);
+                            setState(() => _isUploadingAvatar = true);
+                            try {
+                              final updatedUrl = await _apiService.uploadAvatarBase64(text);
+                              if (mounted) {
+                                setState(() {
+                                  _avatarUrl = updatedUrl;
+                                  _isUploadingAvatar = false;
+                                });
+                              }
+                            } catch (_) {
+                              if (mounted) {
+                                setState(() {
+                                  _avatarUrl = text;
+                                  _isUploadingAvatar = false;
+                                });
+                              }
+                            }
+                          }
+                        },
+                        child: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -163,9 +327,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isUploadingAvatar = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to upload photo: ${e.toString().replaceAll("Exception: ", "")}')),
-        );
+        final errStr = e.toString();
+        if (errStr.contains('MissingPluginException')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please restart the app once to complete photo picker setup. In the meantime, you can pick a preset avatar!'),
+              backgroundColor: Color(0xFFD97706),
+              duration: Duration(seconds: 4),
+            ),
+          );
+          _pickAvatarImage();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to upload photo: ${errStr.replaceAll("Exception: ", "")}')),
+          );
+        }
       }
     }
   }
