@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'profile_screen.dart';
@@ -17,6 +18,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _gender = 'Male';
   String _weight = '68 kg';
   String _height = '175 cm';
+  String? _avatarUrl;
 
   @override
   void initState() {
@@ -70,6 +72,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       } else if (profile['height'] != null && profile['height'].toString().trim().isNotEmpty && profile['height'].toString().trim() != 'undefined') {
         _height = '${profile['height']} cm';
       }
+      if (profile['avatar_url'] != null && profile['avatar_url'].toString().trim().isNotEmpty && profile['avatar_url'].toString().trim() != 'undefined') {
+        _avatarUrl = profile['avatar_url'].toString().trim();
+      }
     });
   }
 
@@ -104,10 +109,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 26,
-                        backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
-                        child: Icon(Icons.person, color: theme.primaryColor, size: 28),
+                      ClipOval(
+                        child: Container(
+                          width: 52,
+                          height: 52,
+                          color: theme.primaryColor.withValues(alpha: 0.1),
+                          child: (_avatarUrl != null && _avatarUrl!.isNotEmpty)
+                              ? (_avatarUrl!.startsWith('data:image')
+                                  ? Image.memory(
+                                      base64Decode(_avatarUrl!.split(',').last),
+                                      fit: BoxFit.cover,
+                                      width: 52,
+                                      height: 52,
+                                    )
+                                  : Image.network(
+                                      _avatarUrl!,
+                                      fit: BoxFit.cover,
+                                      width: 52,
+                                      height: 52,
+                                      errorBuilder: (_, __, ___) => Icon(Icons.person, color: theme.primaryColor, size: 28),
+                                    ))
+                              : Icon(Icons.person, color: theme.primaryColor, size: 28),
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
@@ -265,8 +266,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   String _formatDob(String raw) {
     final s = raw.trim();
-    if (s.isEmpty || s == 'null' || s == 'Not specified')
+    if (s.isEmpty || s == 'null' || s == 'Not specified') {
       return 'Not specified';
+    }
     try {
       final clean = s.split('T').first;
       final parts = clean.split('-');
@@ -452,15 +454,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     ),
                                     child: Row(
                                       children: [
-                                        CircleAvatar(
-                                          radius: 28,
-                                          backgroundColor:
-                                              const Color(0xFF0D9488),
-                                          child: Text(bloodGroup,
-                                              style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 20)),
+                                        ClipOval(
+                                          child: Container(
+                                            width: 56,
+                                            height: 56,
+                                            color: const Color(0xFF0D9488),
+                                            child: (profile?['avatar_url'] != null && profile!['avatar_url'].toString().trim().isNotEmpty)
+                                                ? (profile['avatar_url'].toString().startsWith('data:image')
+                                                    ? Image.memory(
+                                                        base64Decode(profile['avatar_url'].toString().split(',').last),
+                                                        fit: BoxFit.cover,
+                                                        width: 56,
+                                                        height: 56,
+                                                      )
+                                                    : Image.network(
+                                                        profile['avatar_url'].toString(),
+                                                        fit: BoxFit.cover,
+                                                        width: 56,
+                                                        height: 56,
+                                                        errorBuilder: (_, __, ___) => Center(
+                                                          child: Text(bloodGroup,
+                                                              style: const TextStyle(
+                                                                  color: Colors.white,
+                                                                  fontWeight: FontWeight.bold,
+                                                                  fontSize: 20)),
+                                                        ),
+                                                      ))
+                                                : Center(
+                                                    child: Text(bloodGroup,
+                                                        style: const TextStyle(
+                                                            color: Colors.white,
+                                                            fontWeight: FontWeight.bold,
+                                                            fontSize: 20)),
+                                                  ),
+                                          ),
                                         ),
                                         const SizedBox(width: 16),
                                         Expanded(
@@ -1165,9 +1192,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       borderRadius: BorderRadius.circular(10)),
                 ),
                 onPressed: () {
-                  if (widget.onNavigateTab != null)
+                  if (widget.onNavigateTab != null) {
                     widget.onNavigateTab!(1,
                         subTabIndex: 0, openAddModal: false);
+                  }
                 },
                 child: const Text('Add Health Records',
                     style:
@@ -1372,18 +1400,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ? 'Manage Allergies'
                             : 'Add Allergy',
                         onTap: () {
-                          if (widget.onNavigateTab != null)
+                          if (widget.onNavigateTab != null) {
                             widget.onNavigateTab!(1,
                                 subTabIndex: 1, openAddModal: false);
+                          }
                         },
                       ),
                       _buildQuickActionButton(
                         icon: Icons.medication_outlined,
                         label: medsCount > 0 ? 'Manage Meds' : 'Add Med',
                         onTap: () {
-                          if (widget.onNavigateTab != null)
+                          if (widget.onNavigateTab != null) {
                             widget.onNavigateTab!(1,
                                 subTabIndex: 0, openAddModal: false);
+                          }
                         },
                       ),
                       _buildQuickActionButton(
@@ -1402,9 +1432,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         icon: Icons.favorite_outline,
                         label: 'Log Vitals',
                         onTap: () {
-                          if (widget.onNavigateTab != null)
+                          if (widget.onNavigateTab != null) {
                             widget.onNavigateTab!(1,
                                 subTabIndex: 3, openAddModal: false);
+                          }
                         },
                       ),
                       _buildQuickActionButton(
@@ -1413,9 +1444,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ? 'Manage Conditions'
                             : 'Add Condition',
                         onTap: () {
-                          if (widget.onNavigateTab != null)
+                          if (widget.onNavigateTab != null) {
                             widget.onNavigateTab!(1,
                                 subTabIndex: 2, openAddModal: false);
+                          }
                         },
                       ),
                     ],
@@ -2159,7 +2191,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       onPressed: () async {
                         if (nameController.text.trim().isEmpty ||
-                            phoneController.text.trim().isEmpty) return;
+                            phoneController.text.trim().isEmpty) {
+                          return;
+                        }
                         try {
                           final payload = {
                             'name': nameController.text.trim(),
@@ -2340,7 +2374,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       onPressed: () async {
                         if (providerController.text.trim().isEmpty ||
-                            policyController.text.trim().isEmpty) return;
+                            policyController.text.trim().isEmpty) {
+                          return;
+                        }
                         try {
                           final payload = {
                             'provider_name': providerController.text.trim(),

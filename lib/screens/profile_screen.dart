@@ -481,6 +481,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         bloodGroup: _selectedBloodGroup,
         weightKg: double.tryParse(_weightController.text.trim()),
         heightCm: double.tryParse(_heightController.text.trim()),
+        avatarUrl: _avatarUrl,
       );
 
       // 2. Post Allergies
@@ -580,6 +581,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         bloodGroup: _selectedBloodGroup,
         weightKg: double.tryParse(_weightController.text.trim()),
         heightCm: double.tryParse(_heightController.text.trim()),
+        avatarUrl: _avatarUrl,
       );
 
       HealthCacheManager.invalidate();
