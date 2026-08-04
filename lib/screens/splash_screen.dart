@@ -29,27 +29,44 @@ class _SplashScreenState extends State<SplashScreen> {
     if (token != null && token.isNotEmpty) {
       try {
         final profileRes = await ApiService().getProfile();
-        final profile = profileRes['data'];
-        final fullName = profile != null ? profile['full_name'] : null;
+        final profile = profileRes['profile'] ?? profileRes['data'];
+        final String? fullName = profile != null ? profile['full_name']?.toString().trim() : null;
 
         if (!mounted) return;
 
-        if (fullName != null && fullName.toString().trim().isNotEmpty) {
+        if (fullName != null && fullName.isNotEmpty && fullName != 'undefined') {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
           );
         } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const ProfileScreen()),
-          );
+          try {
+            final dash = await ApiService().getDashboard();
+            final dashProfile = dash['profile'];
+            final dashName = dashProfile != null ? dashProfile['full_name']?.toString().trim() : null;
+            if (dashName != null && dashName.isNotEmpty && dashName != 'undefined') {
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+                );
+                return;
+              }
+            }
+          } catch (_) {}
+
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const ProfileScreen()),
+            );
+          }
         }
       } catch (_) {
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+          MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
         );
       }
     } else {
