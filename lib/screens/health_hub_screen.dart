@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../main.dart' show medicationRepo, allergyRepo, conditionRepo;
 import '../database/app_database.dart' show Medication, Allergy, Condition;
-import 'prescription_scanner_screen.dart';
 
 class HealthHubScreen extends StatefulWidget {
   final int initialSubTabIndex;
@@ -351,19 +350,6 @@ class _HealthHubScreenState extends State<HealthHubScreen>
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.document_scanner_outlined, color: Color(0xFF0D9488)),
-            tooltip: 'Scan RX',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const PrescriptionScannerScreen()),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
           child: Container(

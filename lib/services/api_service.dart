@@ -32,7 +32,8 @@ class HealthCacheManager {
 }
 
 class ApiService {
-  final String baseUrl = "http://192.168.1.27:3000";
+  final String baseUrl =
+      "https://diesel-checklist-surplus-salary.trycloudflare.com";
 
   Future<Map<String, dynamic>> sendOtp(String phoneNumber) async {
     final response = await http.post(
@@ -61,7 +62,8 @@ class ApiService {
       return data['data'] as Map<String, dynamic>;
     } else if (response.statusCode == 429) {
       final err = data['error'] ?? {};
-      throw Exception(err['message'] ?? 'Please wait before requesting another OTP');
+      throw Exception(
+          err['message'] ?? 'Please wait before requesting another OTP');
     } else {
       final err = data['error'] ?? {};
       throw Exception(err['message'] ?? 'Failed to resend OTP');
@@ -170,7 +172,9 @@ class ApiService {
 
   // --- MEDICATIONS ---
   Future<List<dynamic>> getMedications({bool forceRefresh = false}) async {
-    if (!forceRefresh && !HealthCacheManager.isDirty && HealthCacheManager.medications != null) {
+    if (!forceRefresh &&
+        !HealthCacheManager.isDirty &&
+        HealthCacheManager.medications != null) {
       return HealthCacheManager.medications!;
     }
     final token = await StorageService().getToken();
@@ -221,7 +225,9 @@ class ApiService {
 
   // --- ALLERGIES ---
   Future<List<dynamic>> getAllergies({bool forceRefresh = false}) async {
-    if (!forceRefresh && !HealthCacheManager.isDirty && HealthCacheManager.allergies != null) {
+    if (!forceRefresh &&
+        !HealthCacheManager.isDirty &&
+        HealthCacheManager.allergies != null) {
       return HealthCacheManager.allergies!;
     }
     final token = await StorageService().getToken();
@@ -257,7 +263,8 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> updateAllergy(String id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateAllergy(
+      String id, Map<String, dynamic> data) async {
     final token = await StorageService().getToken();
     final response = await http.patch(
       Uri.parse('$baseUrl/api/allergies/$id'),
@@ -321,7 +328,8 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> updateMedication(String id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateMedication(
+      String id, Map<String, dynamic> data) async {
     final token = await StorageService().getToken();
     final response = await http.patch(
       Uri.parse('$baseUrl/api/medications/$id'),
@@ -339,7 +347,8 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> updateCondition(String id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateCondition(
+      String id, Map<String, dynamic> data) async {
     final token = await StorageService().getToken();
     final response = await http.patch(
       Uri.parse('$baseUrl/api/conditions/$id'),
@@ -372,7 +381,8 @@ class ApiService {
 
   Future<List<dynamic>> getVitals({bool latestOnly = false}) async {
     final token = await StorageService().getToken();
-    final url = latestOnly ? '$baseUrl/api/vitals?latest=true' : '$baseUrl/api/vitals';
+    final url =
+        latestOnly ? '$baseUrl/api/vitals?latest=true' : '$baseUrl/api/vitals';
     final response = await http.get(
       Uri.parse(url),
       headers: {'Authorization': 'Bearer $token'},
@@ -404,7 +414,10 @@ class ApiService {
     final token = await StorageService().getToken();
     final response = await http.post(
       Uri.parse('$baseUrl/api/surgeries'),
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token'
+      },
       body: jsonEncode(data),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -415,11 +428,15 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> updateSurgery(String id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateSurgery(
+      String id, Map<String, dynamic> data) async {
     final token = await StorageService().getToken();
     final response = await http.patch(
       Uri.parse('$baseUrl/api/surgeries/$id'),
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token'
+      },
       body: jsonEncode(data),
     );
     if (response.statusCode == 200) {
@@ -460,7 +477,10 @@ class ApiService {
     final token = await StorageService().getToken();
     final response = await http.post(
       Uri.parse('$baseUrl/api/devices'),
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token'
+      },
       body: jsonEncode(data),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -471,11 +491,15 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> updateDevice(String id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateDevice(
+      String id, Map<String, dynamic> data) async {
     final token = await StorageService().getToken();
     final response = await http.patch(
       Uri.parse('$baseUrl/api/devices/$id'),
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token'
+      },
       body: jsonEncode(data),
     );
     if (response.statusCode == 200) {
@@ -516,7 +540,8 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> updateVital(String id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateVital(
+      String id, Map<String, dynamic> data) async {
     final token = await StorageService().getToken();
     final response = await http.patch(
       Uri.parse('$baseUrl/api/vitals/$id'),
@@ -549,7 +574,9 @@ class ApiService {
 
   // --- DASHBOARD HYDRATION ---
   Future<Map<String, dynamic>> getDashboard({bool forceRefresh = false}) async {
-    if (!forceRefresh && !HealthCacheManager.isDirty && HealthCacheManager.dashboardData != null) {
+    if (!forceRefresh &&
+        !HealthCacheManager.isDirty &&
+        HealthCacheManager.dashboardData != null) {
       return HealthCacheManager.dashboardData!;
     }
     final token = await StorageService().getToken();
@@ -582,15 +609,20 @@ class ApiService {
       return jsonDecode(response.body);
     } else if (response.statusCode == 429) {
       final res = jsonDecode(response.body);
-      throw Exception(res['error']?['message'] ?? 'Rate limited. Please wait a few minutes.');
+      throw Exception(res['error']?['message'] ??
+          'Rate limited. Please wait a few minutes.');
     } else {
       final res = jsonDecode(response.body);
-      throw Exception(res['error']?['message'] ?? 'Failed to regenerate briefing');
+      throw Exception(
+          res['error']?['message'] ?? 'Failed to regenerate briefing');
     }
   }
 
-  Future<Map<String, dynamic>> getCardSecurity({bool forceRefresh = false}) async {
-    if (!forceRefresh && !HealthCacheManager.isDirty && HealthCacheManager.cardSecurityData != null) {
+  Future<Map<String, dynamic>> getCardSecurity(
+      {bool forceRefresh = false}) async {
+    if (!forceRefresh &&
+        !HealthCacheManager.isDirty &&
+        HealthCacheManager.cardSecurityData != null) {
       return HealthCacheManager.cardSecurityData!;
     }
     try {
@@ -654,7 +686,8 @@ class ApiService {
     return [];
   }
 
-  Future<Map<String, dynamic>> placeCardOrder(Map<String, dynamic> orderData) async {
+  Future<Map<String, dynamic>> placeCardOrder(
+      Map<String, dynamic> orderData) async {
     final token = await StorageService().getToken();
     final response = await http.post(
       Uri.parse('$baseUrl/api/card/order'),
@@ -667,12 +700,16 @@ class ApiService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      return {'success': true, 'order_id': 'ORD-${DateTime.now().millisecondsSinceEpoch}'};
+      return {
+        'success': true,
+        'order_id': 'ORD-${DateTime.now().millisecondsSinceEpoch}'
+      };
     }
   }
 
   // --- SCANNER & INTERACTION CHECKER ---
-  Future<Map<String, dynamic>> checkDrugInteraction(String candidateDrug) async {
+  Future<Map<String, dynamic>> checkDrugInteraction(
+      String candidateDrug) async {
     final token = await StorageService().getToken();
     final response = await http.post(
       Uri.parse('$baseUrl/api/checker/drug-interaction'),
@@ -690,7 +727,8 @@ class ApiService {
   }
 
   // --- EMERGENCY CONTACTS ---
-  Future<Map<String, dynamic>> addEmergencyContact(Map<String, dynamic> contactData) async {
+  Future<Map<String, dynamic>> addEmergencyContact(
+      Map<String, dynamic> contactData) async {
     final token = await StorageService().getToken();
     final response = await http.post(
       Uri.parse('$baseUrl/api/emergency-contacts'),
@@ -727,7 +765,8 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> updateEmergencyContact(String id, Map<String, dynamic> contactData) async {
+  Future<Map<String, dynamic>> updateEmergencyContact(
+      String id, Map<String, dynamic> contactData) async {
     final token = await StorageService().getToken();
     final response = await http.put(
       Uri.parse('$baseUrl/api/emergency-contacts/$id'),
@@ -742,7 +781,8 @@ class ApiService {
       return jsonDecode(response.body) as Map<String, dynamic>;
     } else {
       final errorData = jsonDecode(response.body);
-      throw Exception(errorData['error'] ?? 'Failed to update emergency contact');
+      throw Exception(
+          errorData['error'] ?? 'Failed to update emergency contact');
     }
   }
 
@@ -777,7 +817,8 @@ class ApiService {
     return null;
   }
 
-  Future<Map<String, dynamic>> saveInsurance(Map<String, dynamic> insuranceData) async {
+  Future<Map<String, dynamic>> saveInsurance(
+      Map<String, dynamic> insuranceData) async {
     final token = await StorageService().getToken();
     final response = await http.post(
       Uri.parse('$baseUrl/api/insurance'),
