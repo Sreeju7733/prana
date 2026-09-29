@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../services/api_service.dart';
+import '../services/qr_service.dart';
+import '../widgets/reprint_reminder.dart';
 
 class ScanHistoryItem {
   final String id;
@@ -41,15 +43,45 @@ class _MyCardScreenState extends State<MyCardScreen> {
   String _bloodGroup = 'B+';
   String _criticalAllergyText = 'No critical severe allergies logged';
   String _emergencyContact = 'Emergency Relay: Active';
+  String _qrString = '';
 
   List<ScanHistoryItem> _scanHistory = [];
 
   final ApiService _apiService = ApiService();
+  final QrService _qrService = QrService();
 
   @override
   void initState() {
     super.initState();
     _hydrateUserProfile();
+    _fetchQrCode();
+  }
+
+  Future<void> _fetchQrCode() async {
+    try {
+      // Try cached first
+      String? cached = await _qrService.getCachedQr();
+      if (cached != null && cached.isNotEmpty) {
+        if (mounted) setState(() => _qrString = cached);
+        return;
+      }
+      // Fetch fresh from server
+      String? fresh = await _qrService.fetchAndCacheQr();
+      if (fresh != null && mounted) {
+        setState(() => _qrString = fresh);
+      } else if (!mounted) {
+        return;
+      } else {
+        // Generate placeholder for offline/demo
+        setState(() => _qrString = 'PRANA_V2|PID:$_pranaId|OFFLINE_MODE');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _qrString = 'PRANA_V2|PID:$_pranaId|OFFLINE_MODE';
+        });
+      }
+    }
   }
 
   Future<void> _hydrateUserProfile() async {
@@ -800,6 +832,11 @@ class _MyCardScreenState extends State<MyCardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            ReprintReminderBanner(
+              pranaId: _pranaId,
+              onDismiss: () {},
+              onReprint: () => _fetchQrCode(),
+            ),
             // Digital Card Preview (with Loud Suspended Overlay)
             Stack(
               children: [
@@ -871,7 +908,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
                                           border: Border.all(color: const Color(0xFFE2E8F0)),
                                         ),
                                         child: QrImageView(
-                                          data: 'PRANA_V2|PID:$_pranaId|YK:enc_yellow_blob|SIG:ed25519_valid',
+                                          data: _qrString.isNotEmpty ? _qrString : 'PRANA_V2|PID:$_pranaId|OFFLINE_MODE',
                                           version: QrVersions.auto,
                                           size: 200.0,
                                           backgroundColor: Colors.white,
@@ -936,7 +973,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: QrImageView(
-                              data: 'PRANA_V2|PID:$_pranaId|YK:enc_yellow_blob|SIG:ed25519_valid',
+                              data: _qrString.isNotEmpty ? _qrString : 'PRANA_V2|PID:$_pranaId|OFFLINE_MODE',
                               version: QrVersions.auto,
                               size: 140.0,
                               backgroundColor: Colors.white,
@@ -1033,38 +1070,42 @@ class _MyCardScreenState extends State<MyCardScreen> {
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              child: Column(
-                children: [
-                  SwitchListTile(
-                    title: const Text('Card Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    subtitle: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: Text(
-                        _cardActive ? 'Active & Scannable' : 'Card Suspended',
-                        key: ValueKey<bool>(_cardActive),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: _cardActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                          fontWeight: FontWeight.w600,
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      title: const Text('Card Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      subtitle: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: Text(
+                          _cardActive ? 'Active & Scannable' : 'Card Suspended',
+                          key: ValueKey<bool>(_cardActive),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _cardActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
+                      value: _cardActive,
+                      activeThumbColor: const Color(0xFF16A34A),
+                      activeTrackColor: const Color(0xFFDCFCE7),
+                      inactiveThumbColor: const Color(0xFF94A3B8),
+                      inactiveTrackColor: const Color(0xFFE2E8F0),
+                      onChanged: (val) => _onToggleCardStatus(val),
                     ),
-                    value: _cardActive,
-                    activeThumbColor: const Color(0xFF16A34A),
-                    activeTrackColor: const Color(0xFFDCFCE7),
-                    inactiveThumbColor: const Color(0xFF94A3B8),
-                    inactiveTrackColor: const Color(0xFFE2E8F0),
-                    onChanged: (val) => _onToggleCardStatus(val),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.report_problem_outlined, color: Colors.red, size: 22),
-                    title: const Text('Report Card Lost or Stolen', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14)),
-                    subtitle: const Text('Instantly freeze card & revoke responder access', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                    trailing: const Icon(Icons.chevron_right, color: Colors.red),
-                    onTap: () => _showReportLostStolenModal(context),
-                  ),
-                ],
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.report_problem_outlined, color: Colors.red, size: 22),
+                      title: const Text('Report Card Lost or Stolen', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14)),
+                      subtitle: const Text('Instantly freeze card & revoke responder access', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                      trailing: const Icon(Icons.chevron_right, color: Colors.red),
+                      onTap: () => _showReportLostStolenModal(context),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 28),

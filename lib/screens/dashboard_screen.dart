@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
+import '../services/sync_service.dart';
+import '../main.dart' show database, dbService;
 import 'prescription_scanner_screen.dart';
 import 'profile_screen.dart';
 
@@ -16,6 +18,10 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final ApiService _apiService = ApiService();
+  final SyncService _syncService = SyncService(dbService, database);
+
+  SyncState _syncState = SyncState.synced;
+  int _pendingCount = 0;
 
   // Static in-memory caches preserved across tab switches
   static Map<String, dynamic>? _cachedDashboardData;
@@ -177,6 +183,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         HealthCacheManager.dashboardData ??
         _getFallbackDashboardData();
     _fetchDashboardData(force: true);
+
+    // Listen to sync state changes
+    _syncService.stateStream.listen((state) {
+      if (mounted) {
+        setState(() => _syncState = state);
+      }
+    });
+    _syncService.pendingStream.listen((count) {
+      if (mounted) {
+        setState(() => _pendingCount = count);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncService.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchDashboardData({bool force = false}) async {
@@ -1249,21 +1273,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
-        child: RefreshIndicator(
-          color: const Color(0xFF0D9488),
-          onRefresh: () async {
-            await _fetchDashboardData(force: true);
-            _refreshContacts();
-            _refreshInsurance();
-          },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(
-                parent: BouncingScrollPhysics()),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+        child: Column(
+          children: [
+            // Sync status banner
+            _buildSyncBanner(),
+            Expanded(
+              child: RefreshIndicator(
+                color: const Color(0xFF0D9488),
+                onRefresh: () async {
+                  await _fetchDashboardData(force: true);
+                  _refreshContacts();
+                  _refreshInsurance();
+                },
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics()),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                 // 1. Header (2 lines max: Active status + Hello + Monospace PRANA ID + Trust Signal)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2034,6 +2063,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ),
+        ),
+      ],
+    ),
+  ),
+);
+  }
+
+  Widget _buildSyncBanner() {
+    if (_syncState == SyncState.synced) return const SizedBox.shrink();
+    final bgColor = _syncState == SyncState.offline
+        ? const Color(0xFFFEF3C7)
+        : const Color(0xFFDBEAFE);
+    final textColor = _syncState == SyncState.offline
+        ? const Color(0xFF92400E)
+        : const Color(0xFF1E40AF);
+    final icon = _syncState == SyncState.offline
+        ? Icons.wifi_off
+        : Icons.sync;
+    final text = _syncState == SyncState.offline
+        ? '📴 Offline — changes saved locally'
+        : _pendingCount > 0
+            ? '🔄 Syncing $_pendingCount item(s)...'
+            : '🔄 Syncing…';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: bgColor,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: textColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: textColor),
+            ),
+          ),
+          if (_syncState != SyncState.offline)
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2, color: textColor),
+            ),
+        ],
       ),
     );
   }

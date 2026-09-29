@@ -238,29 +238,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              child: Column(
-                children: [
-                  const ListTile(
-                    leading: Icon(Icons.verified_user_outlined, color: Colors.green),
-                    title: Text('Encryption Status'),
-                    subtitle: Text('Active (End-to-End Encrypted)'),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.download_outlined, color: Color(0xFF0284C7)),
-                    title: const Text('Export My Data'),
-                    subtitle: const Text('Download FHIR JSON Format'),
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Exporting FHIR JSON data...')));
-                    },
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.delete_outline, color: Colors.red),
-                    title: const Text('Delete Account', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                    onTap: () {},
-                  ),
-                ],
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+                child: Column(
+                  children: [
+                    const ListTile(
+                      leading: Icon(Icons.verified_user_outlined, color: Colors.green),
+                      title: Text('Encryption Status'),
+                      subtitle: Text('Active (End-to-End Encrypted)'),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.download_outlined, color: Color(0xFF0284C7)),
+                      title: const Text('Export My Data'),
+                      subtitle: const Text('Download FHIR JSON Format'),
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Exporting FHIR JSON data...')));
+                      },
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.delete_outline, color: Colors.red),
+                      title: const Text('Delete Account', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                      onTap: () {},
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 28),

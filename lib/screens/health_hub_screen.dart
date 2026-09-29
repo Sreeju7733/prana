@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../main.dart' show medicationRepo, allergyRepo, conditionRepo;
+import '../database/app_database.dart' show Medication, Allergy, Condition;
 import 'prescription_scanner_screen.dart';
 
 class HealthHubScreen extends StatefulWidget {
@@ -74,7 +76,7 @@ class _HealthHubScreenState extends State<HealthHubScreen>
   }
 
   Future<void> _loadHubData({bool forceSpinner = false}) async {
-    // ZERO API CALLS when cache is clean
+    // Read from local DB first (offline-safe, instant)
     if (!forceSpinner && !HealthCacheManager.isDirty && _cachedMedications != null) {
       if (_isLoading && mounted) {
         setState(() => _isLoading = false);
@@ -85,10 +87,15 @@ class _HealthHubScreenState extends State<HealthHubScreen>
       setState(() => _isLoading = true);
     }
     try {
+      // Load from local DB repositories (offline-first)
+      final medFuture = medicationRepo.getMedications();
+      final allergyFuture = allergyRepo.getAllergies();
+      final conditionFuture = conditionRepo.getConditions();
+
       final results = await Future.wait([
-        _apiService.getMedications().catchError((_) => []),
-        _apiService.getAllergies().catchError((_) => []),
-        _apiService.getConditions().catchError((_) => []),
+        medFuture.catchError((_) => <Medication>[]),
+        allergyFuture.catchError((_) => <Allergy>[]),
+        conditionFuture.catchError((_) => <Condition>[]),
         _apiService.getSurgeries().catchError((_) => []),
         _apiService.getDevices().catchError((_) => []),
         _apiService.getVitals().catchError((_) => []),
@@ -107,17 +114,21 @@ class _HealthHubScreenState extends State<HealthHubScreen>
 
         // Update state and cache ONLY if data changed or initial cache load
         if (_cachedMedications == null || forceSpinner || newJson != oldJson) {
-          _cachedMedications = results[0];
-          _cachedAllergies = results[1];
-          _cachedConditions = results[2];
+          // Convert repository models to map format for compatibility
+          final meds = await medicationRepo.getMedications();
+          final allergies = await allergyRepo.getAllergies();
+          final conditions = await conditionRepo.getConditions();
+          _cachedMedications = meds.map((m) => m.toJson()).toList();
+          _cachedAllergies = allergies.map((a) => a.toJson()).toList();
+          _cachedConditions = conditions.map((c) => c.toJson()).toList();
           _cachedSurgeries = results[3];
           _cachedDevices = results[4];
           _cachedVitals = results[5];
 
           setState(() {
-            _medications = results[0];
-            _allergies = results[1];
-            _conditions = results[2];
+            _medications = _cachedMedications ?? [];
+            _allergies = _cachedAllergies ?? [];
+            _conditions = _cachedConditions ?? [];
             _surgeries = results[3];
             _devices = results[4];
             _vitals = results[5];
@@ -619,27 +630,31 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                                 offset: Offset(0, 4)),
                           ],
                         ),
-                        child: Column(
-                          children: commonMeds
-                              .where((m) =>
-                                  m.toLowerCase().startsWith(
-                                      nameCtrl.text.toLowerCase()) &&
-                                  m.toLowerCase() !=
-                                      nameCtrl.text.toLowerCase())
-                              .take(4)
-                              .map((suggestion) => ListTile(
-                                    dense: true,
-                                    title: Text(suggestion,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13)),
-                                    onTap: () {
-                                      setModalState(() {
-                                        nameCtrl.text = suggestion;
-                                      });
-                                    },
-                                  ))
-                              .toList(),
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Column(
+                            children: commonMeds
+                                .where((m) =>
+                                    m.toLowerCase().startsWith(
+                                        nameCtrl.text.toLowerCase()) &&
+                                    m.toLowerCase() !=
+                                        nameCtrl.text.toLowerCase())
+                                .take(4)
+                                .map((suggestion) => ListTile(
+                                      dense: true,
+                                      title: Text(suggestion,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13)),
+                                      onTap: () {
+                                        setModalState(() {
+                                          nameCtrl.text = suggestion;
+                                        });
+                                      },
+                                    ))
+                                .toList(),
+                          ),
                         ),
                       ),
                     ],
@@ -721,18 +736,14 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                                     final doseCombined = doseVal.isNotEmpty
                                         ? '$doseVal $selectedUnit'
                                         : selectedUnit;
-                                    await _apiService.addMedication({
-                                      'name': nameCtrl.text.trim(),
-                                      'dose': doseCombined,
-                                      'dose_value': doseVal,
-                                      'dose_unit': selectedUnit,
-                                      'frequency': selectedFrequency,
-                                      'reason':
-                                          reasonCtrl.text.trim().isNotEmpty
-                                              ? reasonCtrl.text.trim()
-                                              : null,
-                                      'is_active': true,
-                                    });
+                                    await medicationRepo.createMedication(
+                                      name: nameCtrl.text.trim(),
+                                      dose: doseCombined,
+                                      frequency: selectedFrequency,
+                                      reason: reasonCtrl.text.trim().isNotEmpty
+                                          ? reasonCtrl.text.trim()
+                                          : null,
+                                    );
                                     if (ctx.mounted) Navigator.pop(ctx);
                                     await _loadHubData();
                                   } catch (e) {
@@ -935,27 +946,31 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                                 offset: Offset(0, 4)),
                           ],
                         ),
-                        child: Column(
-                          children: commonAllergies
-                              .where((a) =>
-                                  a.toLowerCase().startsWith(
-                                      allergenCtrl.text.toLowerCase()) &&
-                                  a.toLowerCase() !=
-                                      allergenCtrl.text.toLowerCase())
-                              .take(4)
-                              .map((suggestion) => ListTile(
-                                    dense: true,
-                                    title: Text(suggestion,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13)),
-                                    onTap: () {
-                                      setModalState(() {
-                                        allergenCtrl.text = suggestion;
-                                      });
-                                    },
-                                  ))
-                              .toList(),
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Column(
+                            children: commonAllergies
+                                .where((a) =>
+                                    a.toLowerCase().startsWith(
+                                        allergenCtrl.text.toLowerCase()) &&
+                                    a.toLowerCase() !=
+                                        allergenCtrl.text.toLowerCase())
+                                .take(4)
+                                .map((suggestion) => ListTile(
+                                      dense: true,
+                                      title: Text(suggestion,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13)),
+                                      onTap: () {
+                                        setModalState(() {
+                                          allergenCtrl.text = suggestion;
+                                        });
+                                      },
+                                    ))
+                                .toList(),
+                          ),
                         ),
                       ),
                     ],
@@ -1153,15 +1168,14 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                                   try {
                                     final severityLower =
                                         allergySeverity.toLowerCase();
-                                    await _apiService.addAllergy({
-                                      'allergen': allergenCtrl.text.trim(),
-                                      'severity': severityLower,
-                                      'reaction_description':
-                                          selectedReaction.isNotEmpty
-                                              ? selectedReaction
-                                              : null,
-                                      'is_critical': severityLower == 'severe',
-                                    });
+                                    await allergyRepo.createAllergy(
+                                      allergen: allergenCtrl.text.trim(),
+                                      severity: severityLower,
+                                      reaction: selectedReaction.isNotEmpty
+                                          ? selectedReaction
+                                          : null,
+                                      isCritical: severityLower == 'severe',
+                                    );
                                     if (ctx.mounted) Navigator.pop(ctx);
                                     await _loadHubData();
                                   } catch (e) {
@@ -1336,23 +1350,27 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: const Color(0xFFE2E8F0))),
-                        child: Column(
-                          children: commonConditions
-                              .where((c) =>
-                                  c.toLowerCase().startsWith(
-                                      nameCtrl.text.toLowerCase()) &&
-                                  c.toLowerCase() !=
-                                      nameCtrl.text.toLowerCase())
-                              .take(4)
-                              .map((s) => ListTile(
-                                  dense: true,
-                                  title: Text(s,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13)),
-                                  onTap: () =>
-                                      setModalState(() => nameCtrl.text = s)))
-                              .toList(),
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Column(
+                            children: commonConditions
+                                .where((c) =>
+                                    c.toLowerCase().startsWith(
+                                        nameCtrl.text.toLowerCase()) &&
+                                    c.toLowerCase() !=
+                                        nameCtrl.text.toLowerCase())
+                                .take(4)
+                                .map((s) => ListTile(
+                                    dense: true,
+                                    title: Text(s,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13)),
+                                    onTap: () =>
+                                        setModalState(() => nameCtrl.text = s)))
+                                .toList(),
+                          ),
                         ),
                       ),
                     ],
@@ -1411,17 +1429,14 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                                 if (nameCtrl.text.trim().isNotEmpty) {
                                   setModalState(() => isSubmitting = true);
                                   try {
-                                    await _apiService.addCondition({
-                                      'name': nameCtrl.text.trim(),
-                                      'status': selectedStatus.toLowerCase(),
-                                      'treating_doctor':
-                                          doctorCtrl.text.trim().isNotEmpty
-                                              ? doctorCtrl.text.trim()
-                                              : null,
-                                      'notes': notesCtrl.text.trim().isNotEmpty
+                                    await conditionRepo.createCondition(
+                                      name: nameCtrl.text.trim(),
+                                      status: selectedStatus.toLowerCase(),
+                                      notes: notesCtrl.text.trim().isNotEmpty
                                           ? notesCtrl.text.trim()
                                           : null,
-                                    });
+                                      diagnosedAt: DateTime.now(),
+                                    );
                                     if (ctx.mounted) Navigator.pop(ctx);
                                     await _loadHubData();
                                   } catch (e) {
@@ -1748,9 +1763,6 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                                           locationCtrl.text.trim().isNotEmpty
                                               ? locationCtrl.text.trim()
                                               : null,
-                                      'notes': notesCtrl.text.trim().isNotEmpty
-                                          ? notesCtrl.text.trim()
-                                          : null,
                                     });
                                     if (ctx.mounted) Navigator.pop(ctx);
                                     await _loadHubData();
@@ -2771,7 +2783,7 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                 onPressed: () => _confirmDeleteDialog(
                   title: 'Delete Medication',
                   message: 'Are you sure you want to delete "$name"?',
-                  onConfirm: () => _apiService.deleteMedication(id),
+                  onConfirm: () async => await medicationRepo.deleteMedication(id),
                 ),
               ),
             ],
@@ -2886,7 +2898,7 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                       onPressed: () => _confirmDeleteDialog(
                         title: 'Delete Critical Allergy',
                         message: 'Are you sure you want to delete "$name"?',
-                        onConfirm: () => _apiService.deleteAllergy(id),
+                        onConfirm: () async => await allergyRepo.deleteAllergy(id),
                       ),
                     ),
                   ],
@@ -2957,7 +2969,7 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                       onPressed: () => _confirmDeleteDialog(
                         title: 'Delete Allergy',
                         message: 'Are you sure you want to delete "$name"?',
-                        onConfirm: () => _apiService.deleteAllergy(id),
+                        onConfirm: () async => await allergyRepo.deleteAllergy(id),
                       ),
                     ),
                   ],
@@ -3186,9 +3198,6 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                                           locationCtrl.text.trim().isNotEmpty
                                               ? locationCtrl.text.trim()
                                               : null,
-                                      'notes': notesCtrl.text.trim().isNotEmpty
-                                          ? notesCtrl.text.trim()
-                                          : null,
                                     });
                                     if (ctx.mounted) Navigator.pop(ctx);
                                     await _loadHubData();
@@ -3283,7 +3292,10 @@ class _HealthHubScreenState extends State<HealthHubScreen>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: ListTile(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: ListTile(
         onTap: onTap,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         leading: Container(
@@ -3318,6 +3330,7 @@ class _HealthHubScreenState extends State<HealthHubScreen>
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -3545,7 +3558,7 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                 onPressed: () => _confirmDeleteDialog(
                   title: 'Delete Condition',
                   message: 'Are you sure you want to delete "$name"?',
-                  onConfirm: () => _apiService.deleteCondition(id),
+                  onConfirm: () async => await conditionRepo.deleteCondition(id),
                 ),
               ),
             ],
