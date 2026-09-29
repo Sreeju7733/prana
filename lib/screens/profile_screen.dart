@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import '../main_navigation_screen.dart';
 import '../services/api_service.dart';
 
@@ -25,6 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _weightController = TextEditingController();
   final _heightController = TextEditingController();
   String? _avatarUrl;
+  bool _isUploadingAvatar = false;
   String _selectedGender = 'M';
   String _selectedBloodGroup = 'O+';
   final List<String> _bloodGroups = [
@@ -116,7 +118,318 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  final List<String> _presetAvatars = const [
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&auto=format&fit=crop&q=80',
+  ];
 
+  Future<void> _pickAvatarImage() async {
+    final urlController = TextEditingController();
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalCtx) {
+        return Container(
+          padding: EdgeInsets.only(
+            top: 20,
+            left: 20,
+            right: 20,
+            bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 24,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Choose Profile Photo',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.pop(modalCtx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Option 1: Native Camera & Gallery
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: const BorderSide(color: Color(0xFF0D9488)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(modalCtx);
+                          await _selectAndUploadImage(ImageSource.gallery);
+                        },
+                        icon: const Icon(Icons.photo_library_outlined,
+                            color: Color(0xFF0D9488), size: 20),
+                        label: const Text(
+                          'Gallery',
+                          style: TextStyle(
+                            color: Color(0xFF0D9488),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0D9488),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(modalCtx);
+                          await _selectAndUploadImage(ImageSource.camera);
+                        },
+                        icon: const Icon(Icons.camera_alt_outlined,
+                            color: Colors.white, size: 20),
+                        label: const Text(
+                          'Camera',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Option 2: Quick Presets Grid
+                const Text(
+                  'OR CHOOSE A PRESET AVATAR',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF64748B),
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 64,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _presetAvatars.length,
+                    itemBuilder: (context, idx) {
+                      final avatar = _presetAvatars[idx];
+                      return GestureDetector(
+                        onTap: () async {
+                          Navigator.pop(modalCtx);
+                          setState(() => _isUploadingAvatar = true);
+                          try {
+                            final updatedUrl =
+                                await _apiService.uploadAvatarBase64(avatar);
+                            if (mounted) {
+                              setState(() {
+                                _avatarUrl = updatedUrl;
+                                _isUploadingAvatar = false;
+                              });
+                              ScaffoldMessenger.of(this.context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Avatar updated successfully!'),
+                                  backgroundColor: Color(0xFF0D9488),
+                                ),
+                              );
+                            }
+                          } catch (_) {
+                            if (mounted) {
+                              setState(() {
+                                _avatarUrl = avatar;
+                                _isUploadingAvatar = false;
+                              });
+                            }
+                          }
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 12),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: _avatarUrl == avatar
+                                  ? const Color(0xFF0D9488)
+                                  : Colors.transparent,
+                              width: 2.5,
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 28,
+                            backgroundImage: NetworkImage(avatar),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Option 3: Image URL Input
+                const Text(
+                  'OR PASTE AN IMAGE URL',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF64748B),
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: urlController,
+                        decoration: InputDecoration(
+                          hintText: 'https://example.com/photo.jpg',
+                          hintStyle: const TextStyle(fontSize: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F172A),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () async {
+                        final text = urlController.text.trim();
+                        if (text.isNotEmpty) {
+                          Navigator.pop(modalCtx);
+                          setState(() => _isUploadingAvatar = true);
+                          try {
+                            final updatedUrl =
+                                await _apiService.uploadAvatarBase64(text);
+                            if (mounted) {
+                              setState(() {
+                                _avatarUrl = updatedUrl;
+                                _isUploadingAvatar = false;
+                              });
+                            }
+                          } catch (_) {
+                            if (mounted) {
+                              setState(() {
+                                _avatarUrl = text;
+                                _isUploadingAvatar = false;
+                              });
+                            }
+                          }
+                        }
+                      },
+                      child: const Text(
+                        'Save',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _selectAndUploadImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 600,
+        maxHeight: 600,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() => _isUploadingAvatar = true);
+        final bytes = await pickedFile.readAsBytes();
+        final base64Str = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+        final uploadedUrl = await _apiService.uploadAvatarBase64(base64Str);
+        if (mounted) {
+          setState(() {
+            _avatarUrl = uploadedUrl;
+            _isUploadingAvatar = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile photo uploaded and saved!'),
+              backgroundColor: Color(0xFF0D9488),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploadingAvatar = false);
+        final errStr = e.toString();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              errStr.contains('MissingPluginException')
+                  ? 'Please restart the app to complete photo picker setup, or choose a preset avatar!'
+                  : 'Failed to upload photo: ${errStr.replaceAll("Exception: ", "")}',
+            ),
+            backgroundColor: errStr.contains('MissingPluginException') ? const Color(0xFFD97706) : Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
 
   Future<void> _loadExistingData() async {
     try {
@@ -791,41 +1104,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
           const SizedBox(height: 24),
 
-          // Profile Avatar
+          // Profile Avatar Upload Header
           Center(
-            child: Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFCCFBF1),
-                border: Border.all(color: const Color(0xFF0D9488), width: 2.5),
-              ),
-              child: ClipOval(
-                child: (_avatarUrl != null && _avatarUrl!.isNotEmpty)
-                    ? (_avatarUrl!.startsWith('data:image')
-                        ? Image.memory(
-                            base64Decode(_avatarUrl!.split(',').last),
-                            fit: BoxFit.cover,
-                            width: 96,
-                            height: 96,
-                          )
-                        : Image.network(
-                            _avatarUrl!,
-                            fit: BoxFit.cover,
-                            width: 96,
-                            height: 96,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.person,
-                              size: 50,
+            child: GestureDetector(
+              onTap: _isUploadingAvatar
+                  ? null
+                  : () => Future.microtask(_pickAvatarImage),
+              child: Stack(
+                children: [
+                  Container(
+                    width: 96,
+                    height: 96,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFCCFBF1),
+                      border: Border.all(color: const Color(0xFF0D9488), width: 2.5),
+                    ),
+                    child: _isUploadingAvatar
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
                               color: Color(0xFF0D9488),
                             ),
-                          ))
-                    : const Icon(
-                        Icons.person,
-                        size: 50,
-                        color: Color(0xFF0D9488),
+                          )
+                        : ClipOval(
+                            child: (_avatarUrl != null && _avatarUrl!.isNotEmpty)
+                                ? (_avatarUrl!.startsWith('data:image')
+                                    ? Image.memory(
+                                        base64Decode(_avatarUrl!.split(',').last),
+                                        fit: BoxFit.cover,
+                                        width: 96,
+                                        height: 96,
+                                      )
+                                    : Image.network(
+                                        _avatarUrl!,
+                                        fit: BoxFit.cover,
+                                        width: 96,
+                                        height: 96,
+                                        errorBuilder: (_, __, ___) => const Icon(
+                                          Icons.person,
+                                          size: 50,
+                                          color: Color(0xFF0D9488),
+                                        ),
+                                      ))
+                                : const Icon(
+                                    Icons.person,
+                                    size: 50,
+                                    color: Color(0xFF0D9488),
+                                  ),
+                          ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0D9488),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
                       ),
+                      child: const Icon(
+                        Icons.camera_alt_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -1065,7 +1411,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: _hasKnownAllergies
                           ? theme.primaryColor.withValues(alpha: 0.08)
                           : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+              when i clikc one the avathar like a darkshade and nothing like selecting phorot or thing        borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: _hasKnownAllergies
                             ? theme.primaryColor
