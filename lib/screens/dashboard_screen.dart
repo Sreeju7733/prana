@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import '../services/sync_service.dart';
 import '../main.dart' show database, dbService;
-import 'prescription_scanner_screen.dart';
 import 'profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -1455,18 +1454,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             widget.onNavigateTab!(1,
                                 subTabIndex: 0, openAddModal: false);
                           }
-                        },
-                      ),
-                      _buildQuickActionButton(
-                        icon: Icons.camera_alt_outlined,
-                        label: 'Scan RX',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) =>
-                                    const PrescriptionScannerScreen()),
-                          );
                         },
                       ),
                       _buildQuickActionButton(
