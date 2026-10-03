@@ -101,7 +101,49 @@ class _HealthHubScreenState extends State<HealthHubScreen>
       ]);
 
       if (mounted) {
-        final newJson = jsonEncode(results);
+        // Convert repository models to map format for compatibility
+        final localMeds = await medicationRepo.getMedications();
+        final localAllergies = await allergyRepo.getAllergies();
+        final localConditions = await conditionRepo.getConditions();
+
+        List<dynamic> medsList = localMeds.map((m) => m.toJson()).toList();
+        List<dynamic> allergiesList = localAllergies.map((a) => a.toJson()).toList();
+        List<dynamic> conditionsList = localConditions.map((c) => c.toJson()).toList();
+
+        // If local DB is empty (e.g. initial login / before sync pulls), fallback to API data
+        if (medsList.isEmpty) {
+          try {
+            final apiMeds = await _apiService.getMedications(forceRefresh: forceSpinner);
+            if (apiMeds.isNotEmpty) {
+              medsList = apiMeds;
+            }
+          } catch (_) {}
+        }
+        if (allergiesList.isEmpty) {
+          try {
+            final apiAllergies = await _apiService.getAllergies(forceRefresh: forceSpinner);
+            if (apiAllergies.isNotEmpty) {
+              allergiesList = apiAllergies;
+            }
+          } catch (_) {}
+        }
+        if (conditionsList.isEmpty) {
+          try {
+            final apiConditions = await _apiService.getConditions();
+            if (apiConditions.isNotEmpty) {
+              conditionsList = apiConditions;
+            }
+          } catch (_) {}
+        }
+
+        final newJson = jsonEncode([
+          medsList,
+          allergiesList,
+          conditionsList,
+          results[3],
+          results[4],
+          results[5],
+        ]);
         final oldJson = jsonEncode([
           _cachedMedications,
           _cachedAllergies,
@@ -113,13 +155,9 @@ class _HealthHubScreenState extends State<HealthHubScreen>
 
         // Update state and cache ONLY if data changed or initial cache load
         if (_cachedMedications == null || forceSpinner || newJson != oldJson) {
-          // Convert repository models to map format for compatibility
-          final meds = await medicationRepo.getMedications();
-          final allergies = await allergyRepo.getAllergies();
-          final conditions = await conditionRepo.getConditions();
-          _cachedMedications = meds.map((m) => m.toJson()).toList();
-          _cachedAllergies = allergies.map((a) => a.toJson()).toList();
-          _cachedConditions = conditions.map((c) => c.toJson()).toList();
+          _cachedMedications = medsList;
+          _cachedAllergies = allergiesList;
+          _cachedConditions = conditionsList;
           _cachedSurgeries = results[3];
           _cachedDevices = results[4];
           _cachedVitals = results[5];
@@ -2769,7 +2807,15 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                 onPressed: () => _confirmDeleteDialog(
                   title: 'Delete Medication',
                   message: 'Are you sure you want to delete "$name"?',
-                  onConfirm: () async => await medicationRepo.deleteMedication(id),
+                  onConfirm: () async {
+                    try {
+                      await medicationRepo.deleteMedication(id);
+                    } catch (_) {}
+                    try {
+                      await _apiService.deleteMedication(id);
+                    } catch (_) {}
+                    HealthCacheManager.invalidate();
+                  },
                 ),
               ),
             ],
@@ -2884,7 +2930,15 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                       onPressed: () => _confirmDeleteDialog(
                         title: 'Delete Critical Allergy',
                         message: 'Are you sure you want to delete "$name"?',
-                        onConfirm: () async => await allergyRepo.deleteAllergy(id),
+                        onConfirm: () async {
+                          try {
+                            await allergyRepo.deleteAllergy(id);
+                          } catch (_) {}
+                          try {
+                            await _apiService.deleteAllergy(id);
+                          } catch (_) {}
+                          HealthCacheManager.invalidate();
+                        },
                       ),
                     ),
                   ],
@@ -2955,7 +3009,15 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                       onPressed: () => _confirmDeleteDialog(
                         title: 'Delete Allergy',
                         message: 'Are you sure you want to delete "$name"?',
-                        onConfirm: () async => await allergyRepo.deleteAllergy(id),
+                        onConfirm: () async {
+                          try {
+                            await allergyRepo.deleteAllergy(id);
+                          } catch (_) {}
+                          try {
+                            await _apiService.deleteAllergy(id);
+                          } catch (_) {}
+                          HealthCacheManager.invalidate();
+                        },
                       ),
                     ),
                   ],
@@ -3544,7 +3606,15 @@ class _HealthHubScreenState extends State<HealthHubScreen>
                 onPressed: () => _confirmDeleteDialog(
                   title: 'Delete Condition',
                   message: 'Are you sure you want to delete "$name"?',
-                  onConfirm: () async => await conditionRepo.deleteCondition(id),
+                  onConfirm: () async {
+                    try {
+                      await conditionRepo.deleteCondition(id);
+                    } catch (_) {}
+                    try {
+                      await _apiService.deleteCondition(id);
+                    } catch (_) {}
+                    HealthCacheManager.invalidate();
+                  },
                 ),
               ),
             ],

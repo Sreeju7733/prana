@@ -1411,7 +1411,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: _hasKnownAllergies
                           ? theme.primaryColor.withValues(alpha: 0.08)
                           : Colors.white,
-              when i clikc one the avathar like a darkshade and nothing like selecting phorot or thing        borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: _hasKnownAllergies
                             ? theme.primaryColor
