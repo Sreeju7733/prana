@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import '../main_navigation_screen.dart';
 import '../services/api_service.dart';
 
@@ -26,7 +25,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _weightController = TextEditingController();
   final _heightController = TextEditingController();
   String? _avatarUrl;
-  bool _isUploadingAvatar = false;
   String _selectedGender = 'M';
   String _selectedBloodGroup = 'O+';
   final List<String> _bloodGroups = [
@@ -118,15 +116,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  final List<String> _presetAvatars = const [
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&auto=format&fit=crop&q=80',
-  ];
+  // Avatar upload removed.
 
+  // PLACEHOLDER — kept so the search below (for _loadExistingData) still works.
   Future<void> _pickAvatarImage() async {
     final urlController = TextEditingController();
     await showModalBottomSheet(
@@ -383,53 +375,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Future<void> _selectAndUploadImage(ImageSource source) async {
-    try {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(
-        source: source,
-        maxWidth: 600,
-        maxHeight: 600,
-        imageQuality: 85,
-      );
 
-      if (pickedFile != null) {
-        setState(() => _isUploadingAvatar = true);
-        final bytes = await pickedFile.readAsBytes();
-        final base64Str = 'data:image/jpeg;base64,${base64Encode(bytes)}';
-
-        final uploadedUrl = await _apiService.uploadAvatarBase64(base64Str);
-        if (mounted) {
-          setState(() {
-            _avatarUrl = uploadedUrl;
-            _isUploadingAvatar = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profile photo uploaded and saved!'),
-              backgroundColor: Color(0xFF0D9488),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isUploadingAvatar = false);
-        final errStr = e.toString();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              errStr.contains('MissingPluginException')
-                  ? 'Please restart the app to complete photo picker setup, or choose a preset avatar!'
-                  : 'Failed to upload photo: ${errStr.replaceAll("Exception: ", "")}',
-            ),
-            backgroundColor: errStr.contains('MissingPluginException') ? const Color(0xFFD97706) : Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    }
-  }
 
   Future<void> _loadExistingData() async {
     try {
@@ -1104,74 +1050,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
           const SizedBox(height: 24),
 
-          // Profile Avatar Upload Header
+          // Profile Avatar (display only)
           Center(
-            child: GestureDetector(
-              onTap: _isUploadingAvatar
-                  ? null
-                  : () => Future.microtask(_pickAvatarImage),
-              child: Stack(
-                children: [
-                  Container(
-                    width: 96,
-                    height: 96,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFFCCFBF1),
-                      border: Border.all(color: const Color(0xFF0D9488), width: 2.5),
-                    ),
-                    child: _isUploadingAvatar
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: Color(0xFF0D9488),
-                            ),
-                          )
-                        : ClipOval(
-                            child: (_avatarUrl != null && _avatarUrl!.isNotEmpty)
-                                ? (_avatarUrl!.startsWith('data:image')
-                                    ? Image.memory(
-                                        base64Decode(_avatarUrl!.split(',').last),
-                                        fit: BoxFit.cover,
-                                        width: 96,
-                                        height: 96,
-                                      )
-                                    : Image.network(
-                                        _avatarUrl!,
-                                        fit: BoxFit.cover,
-                                        width: 96,
-                                        height: 96,
-                                        errorBuilder: (_, __, ___) => const Icon(
-                                          Icons.person,
-                                          size: 50,
-                                          color: Color(0xFF0D9488),
-                                        ),
-                                      ))
-                                : const Icon(
-                                    Icons.person,
-                                    size: 50,
-                                    color: Color(0xFF0D9488),
-                                  ),
-                          ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(7),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0D9488),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt_rounded,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ),
-                  ),
-                ],
+            child: Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFCCFBF1),
+                border: Border.all(color: const Color(0xFF0D9488), width: 2.5),
+              ),
+              child: const Icon(
+                Icons.person,
+                size: 50,
+                color: Color(0xFF0D9488),
               ),
             ),
           ),
