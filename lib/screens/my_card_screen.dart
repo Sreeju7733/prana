@@ -90,13 +90,19 @@ class _MyCardScreenState extends State<MyCardScreen> {
       final profile = dashboard['profile'] as Map<String, dynamic>?;
       final allergies = await _apiService.getAllergies().catchError((_) => []);
       final contacts = await _apiService.getEmergencyContacts().catchError((_) => []);
-      final securityData = await _apiService.getCardSecurity().catchError((_) => <String, dynamic>{});
+      final securityData = await _apiService.getCardSecurity(forceRefresh: true).catchError((_) => <String, dynamic>{});
       final rawLogs = await _apiService.getScanHistory().catchError((_) => []);
 
       if (mounted) {
         setState(() {
-          if (securityData.containsKey('is_suspended')) {
+          final String? cardStatus = securityData['card_status']?.toString() ??
+              profile?['card_status']?.toString();
+          if (cardStatus != null) {
+            _cardActive = cardStatus != 'suspended' && cardStatus != 'deactivated';
+          } else if (securityData.containsKey('is_suspended')) {
             _cardActive = !(securityData['is_suspended'] == true);
+          } else {
+            _cardActive = true;
           }
 
           if (profile != null) {
@@ -640,6 +646,8 @@ class _MyCardScreenState extends State<MyCardScreen> {
   void _showOrderCardModal(BuildContext context) {
     String paymentMethod = 'UPI';
     bool orderPlaced = false;
+    bool replaceAndDecommissionOld = true;
+    bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
@@ -689,19 +697,21 @@ class _MyCardScreenState extends State<MyCardScreen> {
                           ),
                           const SizedBox(height: 20),
                           const Text(
-                            'Order Placed Successfully!',
+                            'New Card Ordered Successfully!',
                             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                           ),
                           const SizedBox(height: 8),
                           const Text(
-                            'Arrives in 3-5 days',
+                            'Arrives in 3-5 business days',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF16A34A)),
                           ),
                           const SizedBox(height: 12),
-                          const Text(
-                            'Your physical waterproof PRANA card with embedded NFC & emergency QR pointer is being crafted.',
+                          Text(
+                            replaceAndDecommissionOld
+                                ? 'Your old physical card has been securely revoked and removed. Your new card with fresh emergency QR pointer is active.'
+                                : 'Your new physical card with embedded NFC & emergency QR pointer is being crafted.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Color(0xFF64748B), fontSize: 13, height: 1.4),
+                            style: const TextStyle(color: Color(0xFF64748B), fontSize: 13, height: 1.4),
                           ),
                           const SizedBox(height: 24),
                           SizedBox(
@@ -722,10 +732,68 @@ class _MyCardScreenState extends State<MyCardScreen> {
                       ),
                     ),
                   ] else ...[
-                    const Text('Physical PRANA Card — ₹20', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                    const SizedBox(height: 6),
-                    const Text('Waterproof physical NFC + QR card delivered to your doorstep.', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
-                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDCFCE7),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.credit_card, color: Color(0xFF16A34A), size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Order New PRANA Card', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                              SizedBox(height: 2),
+                              Text('₹20 • Waterproof physical NFC + QR card', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: replaceAndDecommissionOld,
+                            activeColor: const Color(0xFF16A34A),
+                            onChanged: (val) {
+                              setModalState(() {
+                                replaceAndDecommissionOld = val ?? true;
+                              });
+                            },
+                          ),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Remove / Invalidate Old Card',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Recommended if old card is lost, damaged, or suspended. Generates a fresh QR code.',
+                                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     TextFormField(
                       initialValue: '124 Park View, MG Road, Bengaluru',
                       decoration: const InputDecoration(
@@ -795,12 +863,38 @@ class _MyCardScreenState extends State<MyCardScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
-                        onPressed: () {
-                          setModalState(() {
-                            orderPlaced = true;
-                          });
-                        },
-                        child: const Text('Order Now • ₹20', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                setModalState(() => isSubmitting = true);
+                                try {
+                                  await _apiService.placeCardOrder({
+                                    'payment_method': paymentMethod,
+                                    'replace_old_card': replaceAndDecommissionOld,
+                                  });
+                                  if (replaceAndDecommissionOld) {
+                                    await _apiService.toggleCardStatus(false);
+                                    await _qrService.fetchAndCacheQr();
+                                    await _fetchQrCode();
+                                  }
+                                } catch (_) {}
+                                if (mounted) {
+                                  setState(() {
+                                    _cardActive = true;
+                                  });
+                                }
+                                setModalState(() {
+                                  isSubmitting = false;
+                                  orderPlaced = true;
+                                });
+                              },
+                        child: isSubmitting
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Text('Pay ₹20 & Order Card', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -810,6 +904,65 @@ class _MyCardScreenState extends State<MyCardScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showRemoveCardModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_forever_rounded, color: Color(0xFFDC2626), size: 28),
+            SizedBox(width: 8),
+            Text('Remove Old Card', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to remove and invalidate your existing card?',
+              style: TextStyle(fontSize: 14, color: Color(0xFF334155), fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 10),
+            Text(
+              '• Emergency scanners will no longer accept this card.\n• You can order a fresh replacement card at any time.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final messenger = ScaffoldMessenger.of(context);
+              setState(() => _cardActive = false);
+              try {
+                await _apiService.removeOldCard();
+              } catch (_) {}
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('Old card removed & permanently invalidated.'),
+                  backgroundColor: Color(0xFFDC2626),
+                ),
+              );
+            },
+            child: const Text('Remove Card', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }
@@ -998,22 +1151,54 @@ class _MyCardScreenState extends State<MyCardScreen> {
                       opacity: !_cardActive ? 1.0 : 0.0,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: const Color(0xFF991B1B).withValues(alpha: 0.92),
+                          color: const Color(0xFF991B1B).withValues(alpha: 0.94),
                           borderRadius: BorderRadius.circular(24),
                         ),
-                        child: const Column(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.block_rounded, color: Colors.white, size: 52),
-                            SizedBox(height: 10),
-                            Text(
+                            const Icon(Icons.block_rounded, color: Colors.white, size: 48),
+                            const SizedBox(height: 8),
+                            const Text(
                               '🛑 CARD SUSPENDED',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20, letterSpacing: 1.5),
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 19, letterSpacing: 1.2),
                             ),
-                            SizedBox(height: 4),
-                            Text(
-                              'All emergency QR resolution is blocked',
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Emergency QR scans & responder access are blocked.',
+                              textAlign: TextAlign.center,
                               style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                            ),
+                            const SizedBox(height: 14),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: const Color(0xFF991B1B),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    elevation: 0,
+                                  ),
+                                  onPressed: () => _onToggleCardStatus(true),
+                                  icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                                  label: const Text('Reactivate Card', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                ),
+                                const SizedBox(width: 8),
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: Colors.white70),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  onPressed: () => _showOrderCardModal(context),
+                                  icon: const Icon(Icons.add_card, size: 16),
+                                  label: const Text('Order New', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -1051,7 +1236,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
                     ),
                     onPressed: () => _showOrderCardModal(context),
                     icon: const Icon(Icons.credit_card_outlined, size: 18),
-                    label: const Text('Order Card (₹20)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    label: const Text('Order New Card (₹20)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -1103,6 +1288,14 @@ class _MyCardScreenState extends State<MyCardScreen> {
                       subtitle: const Text('Instantly freeze card & revoke responder access', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                       trailing: const Icon(Icons.chevron_right, color: Colors.red),
                       onTap: () => _showReportLostStolenModal(context),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.delete_outline_rounded, color: Color(0xFF64748B), size: 22),
+                      title: const Text('Remove / Invalidate Old Card', style: TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.bold, fontSize: 14)),
+                      subtitle: const Text('Permanently invalidate physical card and QR credentials', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                      trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                      onTap: () => _showRemoveCardModal(context),
                     ),
                   ],
                 ),

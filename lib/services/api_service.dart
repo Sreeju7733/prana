@@ -632,41 +632,101 @@ class ApiService {
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final parsed = jsonDecode(response.body) as Map<String, dynamic>;
+        final data = (parsed['data'] is Map<String, dynamic>)
+            ? parsed['data'] as Map<String, dynamic>
+            : parsed;
+        
+        final cardStatus = data['card_status']?.toString();
+        data['is_suspended'] = cardStatus == 'suspended' || cardStatus == 'deactivated';
         HealthCacheManager.cardSecurityData = data;
         return data;
       }
     } catch (_) {}
     return {
       'is_suspended': false,
-      'scans_used_today': 2,
+      'card_status': 'active',
+      'scans_used_today': 0,
       'scans_max_quota': 10,
     };
   }
 
   Future<Map<String, dynamic>> toggleCardStatus(bool isSuspended) async {
     final token = await StorageService().getToken();
+    final endpoint = isSuspended ? 'suspend' : 'reactivate';
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/card/toggle-status'),
+        Uri.parse('$baseUrl/api/card/$endpoint'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({'is_suspended': isSuspended}),
+        body: jsonEncode({
+          if (isSuspended) 'reason': 'User requested suspension',
+        }),
       );
       if (response.statusCode == 200) {
         final res = jsonDecode(response.body) as Map<String, dynamic>;
-        if (HealthCacheManager.cardSecurityData != null) {
-          HealthCacheManager.cardSecurityData!['is_suspended'] = isSuspended;
-        }
+        HealthCacheManager.cardSecurityData ??= <String, dynamic>{};
+        HealthCacheManager.cardSecurityData!['is_suspended'] = isSuspended;
+        HealthCacheManager.cardSecurityData!['card_status'] =
+            isSuspended ? 'suspended' : 'active';
         return res;
       }
     } catch (_) {}
+
+    // Fallback to PATCH /api/card/security
+    try {
+      final patchResponse = await http.patch(
+        Uri.parse('$baseUrl/api/card/security'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'card_status': isSuspended ? 'suspended' : 'active',
+        }),
+      );
+      if (patchResponse.statusCode == 200) {
+        final res = jsonDecode(patchResponse.body) as Map<String, dynamic>;
+        HealthCacheManager.cardSecurityData ??= <String, dynamic>{};
+        HealthCacheManager.cardSecurityData!['is_suspended'] = isSuspended;
+        HealthCacheManager.cardSecurityData!['card_status'] =
+            isSuspended ? 'suspended' : 'active';
+        return res;
+      }
+    } catch (_) {}
+
     if (HealthCacheManager.cardSecurityData != null) {
       HealthCacheManager.cardSecurityData!['is_suspended'] = isSuspended;
+      HealthCacheManager.cardSecurityData!['card_status'] =
+          isSuspended ? 'suspended' : 'active';
     }
     return {'success': true, 'is_suspended': isSuspended};
+  }
+
+  Future<Map<String, dynamic>> removeOldCard() async {
+    final token = await StorageService().getToken();
+    try {
+      // Set card_status to deactivated in security endpoint
+      final patchResponse = await http.patch(
+        Uri.parse('$baseUrl/api/card/security'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'card_status': 'deactivated',
+        }),
+      );
+      if (patchResponse.statusCode == 200) {
+        HealthCacheManager.cardSecurityData ??= <String, dynamic>{};
+        HealthCacheManager.cardSecurityData!['card_status'] = 'deactivated';
+        HealthCacheManager.cardSecurityData!['is_suspended'] = true;
+        return jsonDecode(patchResponse.body);
+      }
+    } catch (_) {}
+    return {'success': true, 'card_status': 'deactivated'};
   }
 
   Future<List<dynamic>> getScanHistory({bool forceRefresh = false}) async {
