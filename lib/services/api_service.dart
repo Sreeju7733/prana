@@ -32,8 +32,7 @@ class HealthCacheManager {
 }
 
 class ApiService {
-  final String baseUrl =
-      "https://enrolled-frank-summary-lasting.trycloudflare.com";
+  final String baseUrl = "https://hat-cross-sapphire-diploma.trycloudflare.com";
 
   Future<Map<String, dynamic>> sendOtp(String phoneNumber) async {
     final response = await http.post(
@@ -844,7 +843,8 @@ class ApiService {
       return rawList.map((item) {
         if (item is Map) {
           final copy = Map<String, dynamic>.from(item);
-          final cleaned = cleanPhoneNumber(copy['phone'] ?? copy['phone_number']);
+          final cleaned =
+              cleanPhoneNumber(copy['phone'] ?? copy['phone_number']);
           copy['phone'] = cleaned;
           copy['phone_number'] = cleaned;
           return copy;
