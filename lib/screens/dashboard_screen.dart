@@ -977,14 +977,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                 c['name'] ?? 'Primary Contact';
                                             final cRel =
                                                 c['relationship'] ?? 'Family';
-                                            final cPhone = c['phone_number'] ??
-                                                c['phone'] ??
-                                                '';
+                                            final cPhone = ApiService.cleanPhoneNumber(
+                                                c['phone_number'] ??
+                                                    c['phone'] ??
+                                                    '');
                                             return Padding(
                                               padding: const EdgeInsets.only(
                                                   bottom: 4),
                                               child: Text(
-                                                  '$cName ($cRel) • $cPhone',
+                                                  cPhone.isNotEmpty
+                                                      ? '$cName ($cRel) • $cPhone'
+                                                      : '$cName ($cRel)',
                                                   style: const TextStyle(
                                                       fontWeight:
                                                           FontWeight.bold,
@@ -1649,6 +1652,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               final String name =
                                   c['name'] ?? 'Emergency Contact';
                               final String rel = c['relationship'] ?? 'Family';
+                              final String phone = ApiService.cleanPhoneNumber(
+                                  c['phone'] ?? c['phone_number'] ?? '');
                               final String contactId =
                                   c['id']?.toString() ?? '';
 
@@ -1687,7 +1692,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            rel,
+                                            phone.isNotEmpty
+                                                ? '$rel • $phone'
+                                                : rel,
                                             style: const TextStyle(
                                                 fontSize: 12,
                                                 color: Color(0xFF64748B)),
@@ -2152,8 +2159,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final nameController = TextEditingController(text: contact?['name'] ?? '');
+    final rawPhone = contact?['phone'] ?? contact?['phone_number'] ?? '';
     final phoneController =
-        TextEditingController(text: contact?['phone'] ?? '');
+        TextEditingController(text: ApiService.cleanPhoneNumber(rawPhone));
 
     const relationshipOptions = [
       'Spouse / Family',
