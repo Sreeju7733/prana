@@ -53,39 +53,55 @@ class _ReprintReminderBannerState extends State<ReprintReminderBanner> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF3E0),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFFFB74D)),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.print_outlined, color: Color(0xFFE65100), size: 20),
-            const SizedBox(width: 8),
-            const Expanded(
-              child: Text(
-                'Your printed card data is outdated. Reprint recommended for accuracy.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF424242)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFFB74D)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.print_outlined, color: Color(0xFFE65100), size: 18),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Printed card data is outdated. Reprint recommended.',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF424242)),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            TextButton(
-              onPressed: widget.onDismiss,
-              child: const Text('Dismiss'),
-            ),
-            ElevatedButton.icon(
-              onPressed: widget.onReprint,
-              icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('Reprint', style: TextStyle(fontSize: 12)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF16A34A),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: widget.onDismiss,
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                child: const Text('Dismiss', style: TextStyle(fontSize: 12)),
               ),
-            ),
-          ],
-        ),
-      );
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: widget.onReprint,
+                icon: const Icon(Icons.refresh, size: 14),
+                label: const Text('Reprint', style: TextStyle(fontSize: 12)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF16A34A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 

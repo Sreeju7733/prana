@@ -991,219 +991,246 @@ class _MyCardScreenState extends State<MyCardScreen> {
               onDismiss: () {},
               onReprint: () => _fetchQrCode(),
             ),
-            // Digital Card Preview (with Loud Suspended Overlay)
-            Stack(
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: const [
-                      BoxShadow(color: Color(0x1A000000), blurRadius: 20, offset: Offset(0, 10)),
-                    ],
+            // Digital Card Preview (Active Card or Suspended State)
+            if (_cardActive)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x1A000000), blurRadius: 20, offset: Offset(0, 10)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.health_and_safety, color: theme.primaryColor, size: 28),
                               const SizedBox(width: 8),
-                              const Text('PRANA CARD', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 2)),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFF10B981)),
-                            ),
-                            child: const Text('GREEN TIER', style: TextStyle(color: Color(0xFF34D399), fontSize: 10, fontWeight: FontWeight.bold)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(_userName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-                      const SizedBox(height: 4),
-                      Text('Blood Group : $_bloodGroup', style: const TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.w600, fontSize: 14)),
-                      const SizedBox(height: 4),
-                      Text(_criticalAllergyText, style: const TextStyle(color: Color(0xFFFCA5A5), fontWeight: FontWeight.w600, fontSize: 13)),
-                      const SizedBox(height: 4),
-                      Text(_emergencyContact, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                      const SizedBox(height: 16),
-                      // Centered QR Code
-                      Center(
-                        child: GestureDetector(
-                          onTap: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => Dialog(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(24.0),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(20),
-                                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                                        ),
-                                        child: QrImageView(
-                                          data: _qrString.isNotEmpty ? _qrString : 'PRANA_V2|PID:$_pranaId|OFFLINE_MODE',
-                                          version: QrVersions.auto,
-                                          size: 200.0,
-                                          backgroundColor: Colors.white,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(_pranaId, style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 18)),
-                                      const SizedBox(height: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFDCFCE7),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: const Text('PRANA V2 • ECC + Ed25519 Signed Payload', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF0F172A),
-                                          borderRadius: BorderRadius.circular(14),
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            const Row(
-                                              children: [
-                                                Icon(Icons.lock_outline, color: Color(0xFF38BDF8), size: 14),
-                                                SizedBox(width: 6),
-                                                Text('HYBRID ENCRYPTION PIPELINE', style: TextStyle(color: Color(0xFF38BDF8), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8)),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 6),
-                                            const Text(
-                                              'Medical JSON → Compress → AES-256-GCM Encrypt → ECC Encrypt Key → Ed25519 Sign',
-                                              style: TextStyle(color: Colors.white70, fontSize: 10, height: 1.3),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            SelectableText(
-                                              'PRANA_V2|PID:$_pranaId|YK:enc_yellow_blob|SIG:ed25519_valid',
-                                              style: const TextStyle(color: Color(0xFF4ADE80), fontSize: 9, fontFamily: 'monospace'),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 14),
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: const Text('Close'),
-                                      ),
-                                    ],
-                                  ),
+                              const Flexible(
+                                child: Text(
+                                  'PRANA CARD',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 2),
                                 ),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: QrImageView(
-                              data: _qrString.isNotEmpty ? _qrString : 'PRANA_V2|PID:$_pranaId|OFFLINE_MODE',
-                              version: QrVersions.auto,
-                              size: 140.0,
-                              backgroundColor: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Center(
-                        child: Text(
-                          'Scan only using PRANA Responder',
-                          style: TextStyle(color: Colors.white54, fontSize: 11, fontStyle: FontStyle.italic),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (!_cardActive)
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF991B1B).withValues(alpha: 0.94),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.block_rounded, color: Colors.white, size: 48),
-                          const SizedBox(height: 8),
-                          const Text(
-                            '🛑 CARD SUSPENDED',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 19, letterSpacing: 1.2),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Emergency QR scans & responder access are blocked.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
-                          ),
-                          const SizedBox(height: 14),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: const Color(0xFF991B1B),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  elevation: 0,
-                                ),
-                                onPressed: () => _onToggleCardStatus(true),
-                                icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                                label: const Text('Reactivate Card', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                              ),
-                              const SizedBox(width: 8),
-                              OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: Colors.white70),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                ),
-                                onPressed: () => _showOrderCardModal(context),
-                                icon: const Icon(Icons.add_card, size: 16),
-                                label: const Text('Order New', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                               ),
                             ],
                           ),
-                        ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF10B981)),
+                          ),
+                          child: const Text('GREEN TIER', style: TextStyle(color: Color(0xFF34D399), fontSize: 10, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(_userName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                    const SizedBox(height: 4),
+                    Text('Blood Group : $_bloodGroup', style: const TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.w600, fontSize: 14)),
+                    const SizedBox(height: 4),
+                    Text(_criticalAllergyText, style: const TextStyle(color: Color(0xFFFCA5A5), fontWeight: FontWeight.w600, fontSize: 13)),
+                    const SizedBox(height: 4),
+                    Text(_emergencyContact, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    const SizedBox(height: 16),
+                    // Centered QR Code
+                    Center(
+                      child: GestureDetector(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => Dialog(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                              child: Padding(
+                                padding: const EdgeInsets.all(24.0),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                                      ),
+                                      child: QrImageView(
+                                        data: _qrString.isNotEmpty ? _qrString : 'PRANA_V2|PID:$_pranaId|OFFLINE_MODE',
+                                        version: QrVersions.auto,
+                                        size: 200.0,
+                                        backgroundColor: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(_pranaId, style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 18)),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFDCFCE7),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Text('PRANA V2 • ECC + Ed25519 Signed Payload', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF0F172A),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Row(
+                                            children: [
+                                              Icon(Icons.lock_outline, color: Color(0xFF38BDF8), size: 14),
+                                              SizedBox(width: 6),
+                                              Text('HYBRID ENCRYPTION PIPELINE', style: TextStyle(color: Color(0xFF38BDF8), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8)),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 6),
+                                          const Text(
+                                            'Medical JSON → Compress → AES-256-GCM Encrypt → ECC Encrypt Key → Ed25519 Sign',
+                                            style: TextStyle(color: Colors.white70, fontSize: 10, height: 1.3),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          SelectableText(
+                                            'PRANA_V2|PID:$_pranaId|YK:enc_yellow_blob|SIG:ed25519_valid',
+                                            style: const TextStyle(color: Color(0xFF4ADE80), fontSize: 9, fontFamily: 'monospace'),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Close'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: QrImageView(
+                            data: _qrString.isNotEmpty ? _qrString : 'PRANA_V2|PID:$_pranaId|OFFLINE_MODE',
+                            version: QrVersions.auto,
+                            size: 140.0,
+                            backgroundColor: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    const Center(
+                      child: Text(
+                        'Scan only using PRANA Responder',
+                        style: TextStyle(color: Colors.white54, fontSize: 11, fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF991B1B), Color(0xFF7F1D1D)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-              ],
-            ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x33DC2626), blurRadius: 20, offset: Offset(0, 10)),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.block_rounded, color: Colors.white, size: 48),
+                    const SizedBox(height: 10),
+                    const Text(
+                      '🛑 CARD SUSPENDED',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 19, letterSpacing: 1.2),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Emergency QR scans & responder access are blocked.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'PID: $_pranaId',
+                        style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 11),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF991B1B),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            onPressed: () => _onToggleCardStatus(true),
+                            icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                            label: const Text('Reactivate', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.white, width: 1.5),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () => _showOrderCardModal(context),
+                            icon: const Icon(Icons.add_card, size: 16),
+                            label: const Text('Order New', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 24),
 
             // Card Action Buttons
@@ -1218,7 +1245,12 @@ class _MyCardScreenState extends State<MyCardScreen> {
                     ),
                     onPressed: () => _showShareOptionsModal(context),
                     icon: const Icon(Icons.share_outlined, size: 18, color: Color(0xFF334155)),
-                    label: const Text('Share Card', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+                    label: const Text(
+                      'Share Card',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1233,7 +1265,12 @@ class _MyCardScreenState extends State<MyCardScreen> {
                     ),
                     onPressed: () => _showOrderCardModal(context),
                     icon: const Icon(Icons.credit_card_outlined, size: 18),
-                    label: const Text('Order New Card (₹20)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    label: const Text(
+                      'Order New Card (₹20)',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],
