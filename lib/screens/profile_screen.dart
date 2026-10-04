@@ -170,8 +170,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
           if (contacts.isNotEmpty) {
             final c = contacts.first;
-            _contactNameController.text = c['name']?.toString() ?? '';
-            _contactPhoneController.text = c['phone']?.toString() ?? c['phone_number']?.toString() ?? '';
+            final rawPhone = c['phone']?.toString() ?? c['phone_number']?.toString() ?? '';
+            _contactPhoneController.text = ApiService.cleanPhoneNumber(rawPhone);
             if (c['relationship'] != null) {
               _contactRelationship = c['relationship'].toString();
             }

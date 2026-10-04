@@ -133,7 +133,8 @@ class _MyCardScreenState extends State<MyCardScreen> {
 
           if (contacts.isNotEmpty) {
             final c = contacts.first;
-            _emergencyContact = '${c['name'] ?? 'Emergency Contact'} • ${c['phone_number'] ?? c['phone'] ?? ''}';
+            final cPhone = ApiService.cleanPhoneNumber(c['phone_number'] ?? c['phone'] ?? '');
+            _emergencyContact = '${c['name'] ?? 'Emergency Contact'}${cPhone.isNotEmpty ? ' • $cPhone' : ''}';
           }
 
           if (rawLogs.isNotEmpty) {

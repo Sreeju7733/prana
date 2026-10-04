@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../database/app_database.dart';
 import '../database/database_service.dart';
 import '../services/storage_service.dart';
+import 'api_service.dart';
 
 /// Sync states for the UI banner
 enum SyncState { offline, syncing, synced }
@@ -544,12 +545,13 @@ class SyncService extends ChangeNotifier {
   }
 
   Future<void> _insertContactFromServer(Map<String, dynamic> item, String uuid) async {
+    final rawPhone = item['phone'] ?? item['phone_number'] ?? '';
     final companion = EmergencyContactsCompanion.insert(
       uuid: uuid,
       profileUuid: _getProfileUuid(),
       name: item['name'] ?? '',
       relationship: item['relationship'] ?? '',
-      phoneNumber: item['phone'] ?? item['phone_number'] ?? '',
+      phoneNumber: ApiService.cleanPhoneNumber(rawPhone),
       isPrimary: Value(item['is_primary'] ?? false),
       createdAt: Value(_parseIsoDateTime(item['created_at']) ?? DateTime.now()),
       updatedAt: Value(_parseIsoDateTime(item['created_at']) ?? DateTime.now()),
@@ -559,12 +561,13 @@ class SyncService extends ChangeNotifier {
   }
 
   Future<void> _updateContactFromServer(Map<String, dynamic> item, String uuid) async {
+    final rawPhone = item['phone'] ?? item['phone_number'] ?? '';
     await (database.update(database.emergencyContacts)
           ..where((t) => t.uuid.equals(uuid)))
         .write(EmergencyContactsCompanion(
       name: Value(item['name']),
       relationship: Value(item['relationship']),
-      phoneNumber: Value(item['phone'] ?? item['phone_number'] ?? ''),
+      phoneNumber: Value(ApiService.cleanPhoneNumber(rawPhone)),
       isPrimary: Value(item['is_primary'] ?? false),
       updatedAt: Value(DateTime.now()),
       syncStatus: const Value('synced'),
