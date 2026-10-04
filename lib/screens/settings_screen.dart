@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'profile_screen.dart';
@@ -142,49 +141,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       GestureDetector(
                         onTap: _openEditProfile,
-                        child: Stack(
-                          children: [
-                            ClipOval(
-                              child: Container(
-                                width: 56,
-                                height: 56,
-                                color: theme.primaryColor.withValues(alpha: 0.1),
-                                child: (_avatarUrl != null && _avatarUrl!.isNotEmpty)
-                                    ? (_avatarUrl!.startsWith('data:image')
-                                        ? Image.memory(
-                                            base64Decode(_avatarUrl!.split(',').last),
-                                            fit: BoxFit.cover,
-                                            width: 56,
-                                            height: 56,
-                                          )
-                                        : Image.network(
-                                            _avatarUrl!,
-                                            fit: BoxFit.cover,
-                                            width: 56,
-                                            height: 56,
-                                            errorBuilder: (_, __, ___) => Icon(Icons.person, color: theme.primaryColor, size: 28),
-                                          ))
-                                    : Icon(Icons.person, color: theme.primaryColor, size: 28),
-                              ),
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.primaryColor.withValues(alpha: 0.12),
+                            border: Border.all(
+                              color: theme.primaryColor.withValues(alpha: 0.25),
+                              width: 1.5,
                             ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: theme.primaryColor,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 1.5),
-                                ),
-                                child: const Icon(
-                                  Icons.camera_alt,
-                                  color: Colors.white,
-                                  size: 11,
-                                ),
-                              ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            _userName.trim().isNotEmpty
+                                ? _userName.trim()[0].toUpperCase()
+                                : 'P',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: theme.primaryColor,
                             ),
-                          ],
+                          ),
                         ),
                       ),
                       const SizedBox(width: 14),

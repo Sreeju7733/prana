@@ -5,7 +5,7 @@ import 'base_repository.dart';
 
 /// Repository for profile CRUD operations with outbox-backed sync.
 class ProfileRepository extends BaseRepository {
-  ProfileRepository(DatabaseService db, AppDatabase database) : super(db, database);
+  ProfileRepository(super.db, super.database);
 
   // ---------- Reads ----------
 

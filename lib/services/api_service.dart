@@ -33,7 +33,7 @@ class HealthCacheManager {
 
 class ApiService {
   final String baseUrl =
-      "https://illustration-bench-alias-william.trycloudflare.com";
+      "https://enrolled-frank-summary-lasting.trycloudflare.com";
 
   Future<Map<String, dynamic>> sendOtp(String phoneNumber) async {
     final response = await http.post(
@@ -636,9 +636,10 @@ class ApiService {
         final data = (parsed['data'] is Map<String, dynamic>)
             ? parsed['data'] as Map<String, dynamic>
             : parsed;
-        
+
         final cardStatus = data['card_status']?.toString();
-        data['is_suspended'] = cardStatus == 'suspended' || cardStatus == 'deactivated';
+        data['is_suspended'] =
+            cardStatus == 'suspended' || cardStatus == 'deactivated';
         HealthCacheManager.cardSecurityData = data;
         return data;
       }

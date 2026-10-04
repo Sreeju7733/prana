@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../services/api_service.dart';
 import '../services/qr_service.dart';
 
 /// Shows a reinstall/update banner when the local card data is out of sync
@@ -52,12 +50,9 @@ class _ReprintReminderBannerState extends State<ReprintReminderBanner> {
   Widget build(BuildContext context) {
     if (_checking || !_showReminder) return const SizedBox.shrink();
 
-    return Banner(
-      message: 'Reprint',
-      location: BannerLocation.topEnd,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        padding: const EdgeInsets.all(12),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: const Color(0xFFFFF3E0),
           borderRadius: BorderRadius.circular(12),
@@ -90,8 +85,7 @@ class _ReprintReminderBannerState extends State<ReprintReminderBanner> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }
 

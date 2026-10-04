@@ -306,8 +306,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _copyPranaId() {
-    final String pranaId =
-        _dashboardData?['profile']?['prana_id'] ?? 'PRAN-2973CAC1';
+    final String pranaId = (_dashboardData?['profile']?['prana_id'] ??
+            'PRAN-2973CAC1')
+        .toString()
+        .toUpperCase();
     Clipboard.setData(ClipboardData(text: pranaId));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -387,7 +389,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 final String name =
                     (profile?['full_name'] ?? 'User').toString().toUpperCase();
                 final String bloodGroup = profile?['blood_group'] ?? 'B+';
-                final String pranaId = profile?['prana_id'] ?? 'PRAN-2973CAC1';
+                final String pranaId = (profile?['prana_id'] ?? 'PRAN-2973CAC1').toString().toUpperCase();
                 final String rawDob = (profile?['date_of_birth'] ??
                         profile?['dob'] ??
                         profile?['dateOfBirth'] ??
@@ -1259,7 +1261,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final profile = _dashboardData?['profile'];
     final healthSummary = _dashboardData?['health_summary'];
 
-    final String pranaId = profile?['prana_id'] ?? 'PRAN-2973CAC1';
+    final String pranaId = (profile?['prana_id'] ?? 'PRAN-2973CAC1').toString().toUpperCase();
     final String bloodGroup = profile?['blood_group'] ?? 'B+';
     final criticalAllergy = healthSummary?['critical_allergy'];
     final String topAllergy = criticalAllergy != null

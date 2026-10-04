@@ -45,8 +45,8 @@ final syncServiceProvider = Provider<SyncService>((ref) {
 
 void main() {
   runApp(
-    ProviderScope(
-      child: const PranaApp(),
+    const ProviderScope(
+      child: PranaApp(),
     ),
   );
 }

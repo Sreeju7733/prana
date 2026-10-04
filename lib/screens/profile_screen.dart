@@ -789,7 +789,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
           const SizedBox(height: 24),
 
-          // Profile Avatar (display only)
+          // Profile Avatar (display letter initial)
           Center(
             child: Container(
               width: 96,
@@ -799,10 +799,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: const Color(0xFFCCFBF1),
                 border: Border.all(color: const Color(0xFF0D9488), width: 2.5),
               ),
-              child: const Icon(
-                Icons.person,
-                size: 50,
-                color: Color(0xFF0D9488),
+              alignment: Alignment.center,
+              child: Text(
+                _nameController.text.trim().isNotEmpty
+                    ? _nameController.text.trim()[0].toUpperCase()
+                    : 'P',
+                style: const TextStyle(
+                  fontSize: 38,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0D9488),
+                ),
               ),
             ),
           ),

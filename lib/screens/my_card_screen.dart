@@ -112,7 +112,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
             }
             final rawId = profile['prana_id']?.toString().trim();
             if (rawId != null && rawId.isNotEmpty && rawId != 'null') {
-              _pranaId = rawId;
+              _pranaId = rawId.toUpperCase();
             }
             final rawBg = profile['blood_group']?.toString().trim();
             if (rawBg != null && rawBg.isNotEmpty && rawBg != 'null' && rawBg != 'undefined') {
@@ -1146,62 +1146,58 @@ class _MyCardScreenState extends State<MyCardScreen> {
                 ),
                 if (!_cardActive)
                   Positioned.fill(
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 300),
-                      opacity: !_cardActive ? 1.0 : 0.0,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF991B1B).withValues(alpha: 0.94),
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.block_rounded, color: Colors.white, size: 48),
-                            const SizedBox(height: 8),
-                            const Text(
-                              '🛑 CARD SUSPENDED',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 19, letterSpacing: 1.2),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Emergency QR scans & responder access are blocked.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
-                            ),
-                            const SizedBox(height: 14),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: const Color(0xFF991B1B),
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    elevation: 0,
-                                  ),
-                                  onPressed: () => _onToggleCardStatus(true),
-                                  icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                                  label: const Text('Reactivate Card', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF991B1B).withValues(alpha: 0.94),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.block_rounded, color: Colors.white, size: 48),
+                          const SizedBox(height: 8),
+                          const Text(
+                            '🛑 CARD SUSPENDED',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 19, letterSpacing: 1.2),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Emergency QR scans & responder access are blocked.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: const Color(0xFF991B1B),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  elevation: 0,
                                 ),
-                                const SizedBox(width: 8),
-                                OutlinedButton.icon(
-                                  style: OutlinedButton.styleFrom(
-                                    side: const BorderSide(color: Colors.white70),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                  onPressed: () => _showOrderCardModal(context),
-                                  icon: const Icon(Icons.add_card, size: 16),
-                                  label: const Text('Order New', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                onPressed: () => _onToggleCardStatus(true),
+                                icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                                label: const Text('Reactivate Card', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                              ),
+                              const SizedBox(width: 8),
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: Colors.white70),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
-                              ],
-                            ),
-                          ],
-                        ),
+                                onPressed: () => _showOrderCardModal(context),
+                                icon: const Icon(Icons.add_card, size: 16),
+                                label: const Text('Order New', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -1262,16 +1258,12 @@ class _MyCardScreenState extends State<MyCardScreen> {
                   children: [
                     SwitchListTile(
                       title: const Text('Card Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      subtitle: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: Text(
-                          _cardActive ? 'Active & Scannable' : 'Card Suspended',
-                          key: ValueKey<bool>(_cardActive),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _cardActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                            fontWeight: FontWeight.w600,
-                          ),
+                      subtitle: Text(
+                        _cardActive ? 'Active & Scannable' : 'Card Suspended',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _cardActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       value: _cardActive,
@@ -1359,48 +1351,45 @@ class _MyCardScreenState extends State<MyCardScreen> {
                           borderRadius: BorderRadius.circular(12),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 6.0),
-                            child: IntrinsicHeight(
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  // Tree Connector Column
-                                  SizedBox(
-                                    width: 24,
-                                    child: Column(
-                                      children: [
-                                        Expanded(
-                                          child: Container(
-                                            width: 2,
-                                            color: isFirst ? Colors.transparent : const Color(0xFFCBD5E1),
-                                          ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Tree Connector Column
+                                SizedBox(
+                                  width: 24,
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        width: 2,
+                                        height: 8,
+                                        color: isFirst ? Colors.transparent : const Color(0xFFCBD5E1),
+                                      ),
+                                      Container(
+                                        width: 10,
+                                        height: 10,
+                                        decoration: BoxDecoration(
+                                          color: item.tierColor,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white, width: 2),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: item.tierColor.withValues(alpha: 0.4),
+                                              blurRadius: 4,
+                                            ),
+                                          ],
                                         ),
-                                        Container(
-                                          width: 10,
-                                          height: 10,
-                                          decoration: BoxDecoration(
-                                            color: item.tierColor,
-                                            shape: BoxShape.circle,
-                                            border: Border.all(color: Colors.white, width: 2),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: item.tierColor.withValues(alpha: 0.4),
-                                                blurRadius: 4,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: Container(
-                                            width: 2,
-                                            color: isLast ? Colors.transparent : const Color(0xFFCBD5E1),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                      Container(
+                                        width: 2,
+                                        height: 38,
+                                        color: isLast ? Colors.transparent : const Color(0xFFCBD5E1),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 8),
-                                  // Content Item
-                                  Expanded(
+                                ),
+                                const SizedBox(width: 8),
+                                // Content Item
+                                Expanded(
                                     child: Container(
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
@@ -1467,11 +1456,10 @@ class _MyCardScreenState extends State<MyCardScreen> {
                                 ],
                               ),
                             ),
-                          ),
-                        );
-                      }),
-                    ),
-            ),
+                          );
+                        }),
+                      ),
+              ),
           ],
         ),
       ),

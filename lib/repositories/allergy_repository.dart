@@ -7,8 +7,7 @@ import 'base_repository.dart';
 class AllergyRepository extends BaseRepository {
   final String _profileUuid;
 
-  AllergyRepository(DatabaseService db, AppDatabase database, this._profileUuid)
-      : super(db, database);
+  AllergyRepository(super.db, super.database, this._profileUuid);
 
   // ---------- Reads ----------
 
@@ -52,7 +51,7 @@ class AllergyRepository extends BaseRepository {
       reaction: Value(reaction),
       isCritical: Value(isCritical),
       diagnosedAt: Value(diagnosedAt),
-      syncStatus: Value('pending'),
+      syncStatus: const Value('pending'),
     ));
 
     await addToOutbox(

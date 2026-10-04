@@ -8,8 +8,7 @@ import 'base_repository.dart';
 class MedicationRepository extends BaseRepository {
   final String _profileUuid;
 
-  MedicationRepository(DatabaseService db, AppDatabase database, this._profileUuid)
-      : super(db, database);
+  MedicationRepository(super.db, super.database, this._profileUuid);
 
   // ---------- Reads (always from local DB, instant + offline-safe) ----------
 
@@ -56,7 +55,7 @@ class MedicationRepository extends BaseRepository {
       reason: Value(reason),
       isActive: Value(isActive),
       startedAt: Value(startedAtParsed),
-      syncStatus: Value('pending'),
+      syncStatus: const Value('pending'),
     ));
 
     // Add to outbox for sync

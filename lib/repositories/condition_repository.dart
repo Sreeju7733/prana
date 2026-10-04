@@ -7,8 +7,7 @@ import 'base_repository.dart';
 class ConditionRepository extends BaseRepository {
   final String _profileUuid;
 
-  ConditionRepository(DatabaseService db, AppDatabase database, this._profileUuid)
-      : super(db, database);
+  ConditionRepository(super.db, super.database, this._profileUuid);
 
   // ---------- Reads ----------
 
@@ -44,7 +43,7 @@ class ConditionRepository extends BaseRepository {
       diagnosedAt: diagnosedAt,
       status: status,
       notes: Value(notes),
-      syncStatus: Value('pending'),
+      syncStatus: const Value('pending'),
     ));
 
     await addToOutbox(

@@ -300,7 +300,9 @@ class SyncService extends ChangeNotifier {
         .get();
 
       final localMap = <String, Medication>{};
-      for (final m in localItems) localMap[m.uuid] = m;
+      for (final m in localItems) {
+        localMap[m.uuid] = m;
+      }
 
       int pulledCount = 0;
       for (final item in serverItems) {
@@ -342,7 +344,9 @@ class SyncService extends ChangeNotifier {
         .get();
 
       final localMap = <String, Allergy>{};
-      for (final a in localItems) localMap[a.uuid] = a;
+      for (final a in localItems) {
+        localMap[a.uuid] = a;
+      }
 
       int pulledCount = 0;
       for (final item in serverItems) {
@@ -381,7 +385,9 @@ class SyncService extends ChangeNotifier {
         .get();
 
       final localMap = <String, Condition>{};
-      for (final c in localItems) localMap[c.uuid] = c;
+      for (final c in localItems) {
+        localMap[c.uuid] = c;
+      }
 
       int pulledCount = 0;
       for (final item in serverItems) {
@@ -420,7 +426,9 @@ class SyncService extends ChangeNotifier {
         .get();
 
       final localMap = <String, EmergencyContact>{};
-      for (final c in localItems) localMap[c.uuid] = c;
+      for (final c in localItems) {
+        localMap[c.uuid] = c;
+      }
 
       int pulledCount = 0;
       for (final item in serverItems) {

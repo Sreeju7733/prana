@@ -47,7 +47,7 @@ LazyDatabase _openConnection() {
     final file = File(p.join(dbFolder.path, _databaseName));
 
     // Get or create database password
-    final storage = FlutterSecureStorage();
+    const storage = FlutterSecureStorage();
     final password = await storage.read(key: _dbPasswordKey);
 
     if (password == null) {

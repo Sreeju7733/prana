@@ -7,8 +7,7 @@ import 'base_repository.dart';
 class EmergencyContactRepository extends BaseRepository {
   final String _profileUuid;
 
-  EmergencyContactRepository(DatabaseService db, AppDatabase database, this._profileUuid)
-      : super(db, database);
+  EmergencyContactRepository(super.db, super.database, this._profileUuid);
 
   // ---------- Reads ----------
 
@@ -45,7 +44,7 @@ class EmergencyContactRepository extends BaseRepository {
       relationship: relationship,
       phoneNumber: phoneNumber,
       isPrimary: Value(isPrimary),
-      syncStatus: Value('pending'),
+      syncStatus: const Value('pending'),
     ));
 
     await addToOutbox(
