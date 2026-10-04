@@ -787,6 +787,18 @@ class ApiService {
     }
   }
 
+  static String cleanPhoneNumber(dynamic raw) {
+    if (raw == null) return '';
+    final str = raw.toString().trim();
+    if (str.startsWith('ENC:')) {
+      try {
+        final decoded = utf8.decode(base64Decode(str.substring(4)));
+        if (decoded.isNotEmpty) return decoded.trim();
+      } catch (_) {}
+    }
+    return str;
+  }
+
   // --- EMERGENCY CONTACTS ---
   Future<Map<String, dynamic>> addEmergencyContact(
       Map<String, dynamic> contactData) async {
@@ -801,7 +813,15 @@ class ApiService {
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
+      final res = jsonDecode(response.body) as Map<String, dynamic>;
+      if (res['data'] is Map) {
+        final d = Map<String, dynamic>.from(res['data'] as Map);
+        final cleaned = cleanPhoneNumber(d['phone'] ?? d['phone_number']);
+        d['phone'] = cleaned;
+        d['phone_number'] = cleaned;
+        res['data'] = d;
+      }
+      return res;
     } else {
       final errorData = jsonDecode(response.body);
       throw Exception(errorData['error'] ?? 'Failed to add emergency contact');
@@ -820,7 +840,17 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      return (data['data'] as List<dynamic>?) ?? [];
+      final rawList = (data['data'] as List<dynamic>?) ?? [];
+      return rawList.map((item) {
+        if (item is Map) {
+          final copy = Map<String, dynamic>.from(item);
+          final cleaned = cleanPhoneNumber(copy['phone'] ?? copy['phone_number']);
+          copy['phone'] = cleaned;
+          copy['phone_number'] = cleaned;
+          return copy;
+        }
+        return item;
+      }).toList();
     } else {
       return [];
     }
@@ -839,7 +869,15 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
+      final res = jsonDecode(response.body) as Map<String, dynamic>;
+      if (res['data'] is Map) {
+        final d = Map<String, dynamic>.from(res['data'] as Map);
+        final cleaned = cleanPhoneNumber(d['phone'] ?? d['phone_number']);
+        d['phone'] = cleaned;
+        d['phone_number'] = cleaned;
+        res['data'] = d;
+      }
+      return res;
     } else {
       final errorData = jsonDecode(response.body);
       throw Exception(
