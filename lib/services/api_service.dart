@@ -32,7 +32,7 @@ class HealthCacheManager {
 }
 
 class ApiService {
-  final String baseUrl = "https://hat-cross-sapphire-diploma.trycloudflare.com";
+  final String baseUrl = "https://prana-henna.vercel.app";
 
   Future<Map<String, dynamic>> sendOtp(String phoneNumber) async {
     final response = await http.post(

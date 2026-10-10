@@ -44,7 +44,8 @@ class SyncService extends ChangeNotifier {
   final StreamController<SyncState> _stateController = StreamController<SyncState>.broadcast();
   final StreamController<int> _pendingController = StreamController<int>.broadcast();
 
-  SyncService(this.db, this.database, {this.baseUrl = 'http://192.168.1.27:3000'}) {
+  SyncService(this.db, this.database, {String? baseUrl})
+      : baseUrl = baseUrl ?? ApiService().baseUrl {
     _setupConnectivityListener();
     // Initial sync attempt
     _trySync();

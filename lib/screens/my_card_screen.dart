@@ -53,8 +53,12 @@ class _MyCardScreenState extends State<MyCardScreen> {
   @override
   void initState() {
     super.initState();
-    _hydrateUserProfile();
-    _fetchQrCode();
+    _initCard();
+  }
+
+  Future<void> _initCard() async {
+    await _hydrateUserProfile();
+    await _fetchQrCode();
   }
 
   Future<void> _fetchQrCode() async {
@@ -72,13 +76,13 @@ class _MyCardScreenState extends State<MyCardScreen> {
       } else if (!mounted) {
         return;
       } else {
-        // Generate placeholder for offline/demo
-        setState(() => _qrString = 'PRANA_V2|PID:$_pranaId|OFFLINE_MODE');
+        // Formatted exclusively for PRANA Responder app scanner
+        setState(() => _qrString = 'PRANA_V2|PID:$_pranaId|STATUS:ACTIVE');
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _qrString = 'PRANA_V2|PID:$_pranaId|OFFLINE_MODE';
+          _qrString = 'PRANA_V2|PID:$_pranaId|STATUS:ACTIVE';
         });
       }
     }
@@ -1070,7 +1074,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
                                         border: Border.all(color: const Color(0xFFE2E8F0)),
                                       ),
                                       child: QrImageView(
-                                        data: _qrString.isNotEmpty ? _qrString : 'PRANA_V2|PID:$_pranaId|OFFLINE_MODE',
+                                        data: _qrString.isNotEmpty ? _qrString : 'PRANA_V2|PID:$_pranaId|STATUS:ACTIVE',
                                         version: QrVersions.auto,
                                         size: 200.0,
                                         backgroundColor: Colors.white,
@@ -1135,7 +1139,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: QrImageView(
-                            data: _qrString.isNotEmpty ? _qrString : 'PRANA_V2|PID:$_pranaId|OFFLINE_MODE',
+                            data: _qrString.isNotEmpty ? _qrString : 'PRANA_V2|PID:$_pranaId|STATUS:ACTIVE',
                             version: QrVersions.auto,
                             size: 140.0,
                             backgroundColor: Colors.white,
