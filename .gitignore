@@ -10,19 +10,14 @@
 .svn/
 mime.cache
 
-# User-specific & IDE stuff
+# IntelliJ / IDE
 .idea/
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/usage.statistics.xml
-.idea/dictionaries
-.idea/shelf
 *.iml
 *.ipr
 *.iws
 .vscode/
 
-# Flutter / Dart Specific
+# Flutter / Dart / Pub
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
@@ -30,6 +25,7 @@ mime.cache
 .pub-cache/
 .pub/
 /build/
+/coverage/
 /ephemeral/
 *.mode1v3
 *.mode2v3
@@ -37,7 +33,7 @@ mime.cache
 *.pbxuser
 *.perspectivev3
 
-# Android Specific
+# Android
 android/app/debug/
 android/app/release/
 android/app/profile/
@@ -47,8 +43,10 @@ android/local.properties
 android/key.properties
 android/app/build/
 android/.idea/
+**/android/**/gradle-wrapper.jar
+**/android/**/GeneratedPluginRegistrant.java
 
-# iOS Specific
+# iOS
 ios/Runner/GeneratedPluginRegistrant.h
 ios/Runner/GeneratedPluginRegistrant.m
 ios/Flutter/App.framework
@@ -64,8 +62,28 @@ ios/Runner.xcodeproj/xcuserdata/
 ios/Runner.xcworkspace/
 ios/Pods/
 ios/.symlinks/
+**/ios/**/*.mode1v3
+**/ios/**/*.mode2v3
+**/ios/**/*.moved-aside
+**/ios/**/*.pbxuser
+**/ios/**/*.perspectivev3
+**/ios/**/Pods/
+**/ios/**/.symlinks/
+**/ios/**/xcuserdata/
+
+# macOS / Windows / Linux generated
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/windows/flutter/generated_plugin_registrant.cc
+**/windows/flutter/generated_plugin_registrant.h
+**/windows/flutter/generated_plugins.cmake
+**/linux/flutter/generated_plugin_registrant.cc
+**/linux/flutter/generated_plugin_registrant.h
+**/linux/flutter/generated_plugins.cmake
 
 # Environment / Secrets
 .env
 .env.*
 !.env.example
+
+# Local machine config
+/local.properties

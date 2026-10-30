@@ -29,6 +29,8 @@ class HealthCacheManager {
     cardSecurityData = null;
     scanHistoryData = null;
   }
+
+  static void clear() => invalidate();
 }
 
 class ApiService {
@@ -636,24 +638,37 @@ class ApiService {
             ? parsed['data'] as Map<String, dynamic>
             : parsed;
 
-        final cardStatus = data['card_status']?.toString();
-        data['is_suspended'] =
-            cardStatus == 'suspended' || cardStatus == 'deactivated';
+        final cardStatus = (data['card_status'] ?? data['status'])
+            ?.toString()
+            .trim()
+            .toLowerCase();
+        if (cardStatus != null && cardStatus.isNotEmpty) {
+          data['card_status'] = cardStatus;
+          data['is_suspended'] = cardStatus == 'suspended' ||
+              cardStatus == 'deactivated' ||
+              cardStatus == 'lost';
+        } else if (data['is_suspended'] is bool) {
+          data['card_status'] =
+              data['is_suspended'] == true ? 'suspended' : 'active';
+        }
         HealthCacheManager.cardSecurityData = data;
         return data;
       }
     } catch (_) {}
-    return {
-      'is_suspended': false,
-      'card_status': 'active',
-      'scans_used_today': 0,
-      'scans_max_quota': 10,
-    };
+    // A failed status request must not make the UI claim the card is active.
+    return HealthCacheManager.cardSecurityData ??
+        <String, dynamic>{
+          'is_suspended': true,
+          'card_status': 'unknown',
+          'scans_used_today': 0,
+          'scans_max_quota': 10,
+        };
   }
 
   Future<Map<String, dynamic>> toggleCardStatus(bool isSuspended) async {
     final token = await StorageService().getToken();
     final endpoint = isSuspended ? 'suspend' : 'reactivate';
+    Object? lastError;
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/api/card/$endpoint'),
@@ -665,7 +680,7 @@ class ApiService {
           if (isSuspended) 'reason': 'User requested suspension',
         }),
       );
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final res = jsonDecode(response.body) as Map<String, dynamic>;
         HealthCacheManager.cardSecurityData ??= <String, dynamic>{};
         HealthCacheManager.cardSecurityData!['is_suspended'] = isSuspended;
@@ -673,7 +688,10 @@ class ApiService {
             isSuspended ? 'suspended' : 'active';
         return res;
       }
-    } catch (_) {}
+      lastError = 'Card status request failed (${response.statusCode}).';
+    } catch (error) {
+      lastError = error;
+    }
 
     // Fallback to PATCH /api/card/security
     try {
@@ -687,22 +705,20 @@ class ApiService {
           'card_status': isSuspended ? 'suspended' : 'active',
         }),
       );
-      if (patchResponse.statusCode == 200) {
+      if (patchResponse.statusCode >= 200 && patchResponse.statusCode < 300) {
         final res = jsonDecode(patchResponse.body) as Map<String, dynamic>;
         HealthCacheManager.cardSecurityData ??= <String, dynamic>{};
         HealthCacheManager.cardSecurityData!['is_suspended'] = isSuspended;
         HealthCacheManager.cardSecurityData!['card_status'] =
             isSuspended ? 'suspended' : 'active';
+        HealthCacheManager.isDirty = false;
         return res;
       }
-    } catch (_) {}
-
-    if (HealthCacheManager.cardSecurityData != null) {
-      HealthCacheManager.cardSecurityData!['is_suspended'] = isSuspended;
-      HealthCacheManager.cardSecurityData!['card_status'] =
-          isSuspended ? 'suspended' : 'active';
+      lastError = 'Card status update failed (${patchResponse.statusCode}).';
+    } catch (error) {
+      lastError = error;
     }
-    return {'success': true, 'is_suspended': isSuspended};
+    throw Exception(lastError);
   }
 
   Future<Map<String, dynamic>> removeOldCard() async {
@@ -719,14 +735,17 @@ class ApiService {
           'card_status': 'deactivated',
         }),
       );
-      if (patchResponse.statusCode == 200) {
+      if (patchResponse.statusCode >= 200 && patchResponse.statusCode < 300) {
         HealthCacheManager.cardSecurityData ??= <String, dynamic>{};
         HealthCacheManager.cardSecurityData!['card_status'] = 'deactivated';
         HealthCacheManager.cardSecurityData!['is_suspended'] = true;
+        HealthCacheManager.isDirty = false;
         return jsonDecode(patchResponse.body);
       }
-    } catch (_) {}
-    return {'success': true, 'card_status': 'deactivated'};
+      throw Exception('Card removal failed (${patchResponse.statusCode}).');
+    } catch (error) {
+      throw Exception('Unable to remove card: $error');
+    }
   }
 
   Future<List<dynamic>> getScanHistory({bool forceRefresh = false}) async {

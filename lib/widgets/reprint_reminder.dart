@@ -32,12 +32,12 @@ class _ReprintReminderBannerState extends State<ReprintReminderBanner> {
   Future<void> _checkNeedReprint() async {
     try {
       final qrService = QrService();
-      final hasQr = await qrService.getCachedQr();
-      final isExpired = await qrService.isQrExpired();
+      final hasQr = await qrService.getCachedQr(pranaId: widget.pranaId);
+      final isExpired = await qrService.isQrExpired(pranaId: widget.pranaId);
       
       if (mounted) {
         setState(() {
-          _showReminder = hasQr == null || isExpired;
+          _showReminder = (hasQr == null || isExpired);
           _checking = false;
         });
       }
@@ -78,7 +78,10 @@ class _ReprintReminderBannerState extends State<ReprintReminderBanner> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TextButton(
-                onPressed: widget.onDismiss,
+                onPressed: () {
+                  setState(() => _showReminder = false);
+                  widget.onDismiss();
+                },
                 style: TextButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                   padding: const EdgeInsets.symmetric(horizontal: 8),

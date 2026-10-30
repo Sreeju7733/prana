@@ -10,8 +10,7 @@ abstract class BaseRepository {
   final DatabaseService db;
   final AppDatabase database;
 
-  BaseRepository(this.db, AppDatabase database)
-      : database = database;
+  BaseRepository(this.db, this.database);
 
   // ---------- Outbox helpers ----------
 

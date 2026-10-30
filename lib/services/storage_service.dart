@@ -1,5 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'api_service.dart';
+
 class StorageService {
   final _storage = const FlutterSecureStorage();
 
@@ -14,6 +16,7 @@ class StorageService {
   }
 
   Future<void> clearAll() async {
+    HealthCacheManager.clear();
     await _storage.deleteAll();
   }
 }

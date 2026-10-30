@@ -1,0 +1,58 @@
+graph TB
+    subgraph Clients["PRANA Presentation Tier (4 Connected Applications)"]
+        PA["1. PRANA Patient Mobile App<br/>(Flutter / Drift ORM / SQLCipher)"]
+        RA["2. PRANA Responder Mobile App<br/>(Flutter / 0ms Cache / Click-to-Call)"]
+        HP["3. PRANA Hospital Web Portal<br/>(Next.js 16 / React 19 / Triage Queue)"]
+        AP["4. PRANA Super Admin Portal<br/>(Next.js 16 / Zero-Knowledge Governance)"]
+        BP["Public Emergency Route<br/>(Edge Web /p/[id])"]
+    end
+
+    subgraph EdgeAPI["Application & API Gateway Tier (Next.js Edge Network)"]
+        AuthSvc["Auth & OTP Engine<br/>(/api/auth/*)"]
+        ClinSvc["Clinical Entity APIs<br/>(/api/allergies, meds, vitals)"]
+        ScanSvc["Triage & Cascade Router<br/>(/api/card/*, /api/scan/*)"]
+        HospSvc["Hospital ER Service<br/>(/api/hospitals/*)"]
+        AdminSvc["Admin Governance API<br/>(/api/admin/*)"]
+        AISvc["AI Extraction Pipeline<br/>(/api/ai-summary, scanner)"]
+    end
+
+    subgraph Security["Security & Cryptographic Boundary"]
+        JWTGuard["JWT Token Verifier<br/>(lib/auth.ts)"]
+        CryptoEngine["Noble Crypto Primitives<br/>(X25519, Ed25519, AES-256-GCM)"]
+        RLSPolicies["PostgreSQL Row-Level Security<br/>(15+ Declarative Policies)"]
+    end
+
+    subgraph Persistence["Persistence & Immutable Audit Layer"]
+        SupabaseDB[(Supabase PostgreSQL 15<br/>Master Relational Schemas)]
+        AuditDB[(Immutable Scan Logs<br/>Trigger: prevent_scan_log_modification)]
+        R2Storage[(Cloudflare R2 Object Storage<br/>Medical Prescriptions & Reports)]
+    end
+
+    subgraph CloudGateways["External Telephony & AI Gateways"]
+        GeminiAI["Google Gemini 2.0 Flash<br/>(Multimodal Vision & Extraction)"]
+        FastSMS["Fast2SMS Telephony Gateway<br/>(Transactional Indian SMS)"]
+    end
+
+    %% Client to Edge
+    PA -->|HTTPS / Bearer JWT| ClinSvc
+    PA -->|Phone & OTP| AuthSvc
+    PA -->|Prescription Photos| AISvc
+    RA -->|Triage Delta-Sync| ScanSvc
+    RA -->|Pre-Hospital Alert| HospSvc
+    HP -->|Live Queue Stream| HospSvc
+    AP -->|Governance Operations| AdminSvc
+    BP -->|Minimal Tier 1 Lookup| ScanSvc
+
+    %% Edge to Security
+    ClinSvc --> JWTGuard
+    ScanSvc --> CryptoEngine
+    AdminSvc --> JWTGuard
+    HospSvc --> JWTGuard
+
+    %% Edge to Persistence
+    JWTGuard --> RLSPolicies
+    RLSPolicies --> SupabaseDB
+    ScanSvc --> AuditDB
+    AISvc --> GeminiAI
+    AuthSvc --> FastSMS
+    AISvc --> R2Storage

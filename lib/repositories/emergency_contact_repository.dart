@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart';
 import '../database/app_database.dart';
-import '../database/database_service.dart';
 import 'base_repository.dart';
 
 /// Repository for emergency contact CRUD operations with outbox-backed sync.
