@@ -42,7 +42,7 @@ class AppDatabase extends _$AppDatabase {
 
 /// Open the database connection with SQLCipher encryption
 LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
+  return LazyDatabase(() async {ad
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, _databaseName));
 
